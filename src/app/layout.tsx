@@ -7,7 +7,6 @@ export const metadata: Metadata = {
   description: "Blender Cloud Rendering",
 };
 
-import Script from "next/script";
 import { Footer } from "@/components/Footer";
 
 export default function RootLayout({
@@ -19,28 +18,30 @@ export default function RootLayout({
 
   return (
     <html lang="en">
+      <head>
+        {/* Google tag (gtag.js) */}
+        {gaId && (
+          <>
+            <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}></script>
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+
+                  gtag('config', '${gaId}');
+                `,
+              }}
+            />
+          </>
+        )}
+      </head>
       <body>
         <Providers>
           {children}
           <Footer />
         </Providers>
-        {/* Google Analytics - Manual Injection */}
-        {gaId && (
-          <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
-              strategy="afterInteractive"
-            />
-            <Script id="google-analytics" strategy="afterInteractive">
-              {`
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                gtag('config', '${gaId}');
-              `}
-            </Script>
-          </>
-        )}
       </body>
     </html>
   );
