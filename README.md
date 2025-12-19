@@ -1,36 +1,179 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚀 RenderLift
 
-## Getting Started
+**RenderLift** is a user‑friendly web application for 3D Blender users to upload Blender projects and render them using free Google Cloud GPUs.  
 
-First, run the development server:
+It integrates with **Google Drive** so users can connect and run renders directly from their Drive files — making cloud rendering fast and accessible.
+
+---
+
+## 🌟 Features
+
+- 🔌 Connect with Google Drive via OAuth  
+- ☁️ Render Blender `.blend` files using Google Cloud GPU instances  
+- 📦 Automatic handling of uploads and downloads to/from Drive  
+- 💸 Free (powered by Google Cloud free tiers)  
+- 🛠️ Easy UI for managing render jobs
+
+---
+
+## 🧠 Why RenderLift?
+
+RenderLift solves a common problem: rendering large Blender scenes on low‑power machines.  
+It gives Blender users access to cloud GPUs without complex setup or paying for expensive services.
+
+---
+
+## 📌 Table of Contents
+
+1. [Demo / Screenshot](#-demo--screenshot)  
+2. [Tech Stack](#-tech-stack)  
+3. [Getting Started](#-getting-started)  
+4. [Configuration](#-configuration)  
+5. [Usage](#-usage)  
+6. [Contributing](#-contributing)  
+7. [License](#-license)
+
+---
+
+## 📸 Demo / Screenshot
+
+*(Add a screenshot or embed a small image/GIF showing the app — optional but very helpful.)*  
+Example Markdown:
+
+```markdown
+![RenderLift Demo](./demo.gif)
+```
+
+---
+
+## 🧱 Tech Stack
+
+- **Next.js** (TypeScript) — Frontend & Backend  
+- **NextAuth.js** — Authentication with Google  
+- **Google Drive API** — File integration  
+- **Google Cloud GPUs** — For rendering Blender files  
+- **Blender CLI** — To perform actual rendering
+
+---
+
+## 🧭 Getting Started
+
+### Prerequisites
+
+Make sure you have:
+
+- Node.js (v18+)  
+- Docker (optional)  
+- Google Cloud project with Drive API enabled
+
+---
+
+### Installation
+
+```bash
+git clone https://github.com/Epicer12/RenderLift.git
+cd RenderLift
+npm install
+```
+
+---
+
+## ⚙️ Configuration
+
+Create `.env.local` in your root folder and add:
+
+```env
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_secret
+NEXTAUTH_SECRET=your_nextauth_secret
+GOOGLE_DRIVE_SCOPES="https://www.googleapis.com/auth/drive.file"
+```
+
+⚠️ **Never commit `.env.local`** — it contains private credentials.
+
+---
+
+## 🚀 Running the App
+
+Start development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open browser and go to:  
+```
+http://localhost:3000
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📄 Production Deployment
 
-## Learn More
+Instructions for production deployment (e.g., Vercel, Render, Cloud Run):
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run build
+npm run start
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+(You may need to configure environment variables in your deployment provider.)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 🧩 Usage
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Connect with your **Google account**  
+2. Give Drive permission to access your Blender files  
+3. Upload / select a `.blend` file  
+4. Start rendering on the cloud GPU  
+5. Download resulting output files
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+*(Include screenshots or UI examples if available.)*
+
+---
+
+## 🤝 Contributing
+
+We welcome improvements, suggestions, and feature requests!  
+To contribute:
+
+1. Fork the project
+2. Create a new branch: `git checkout -b feature/your-feature`
+3. Commit your changes: `git commit -m "Add some feature"`
+4. Push to branch: `git push origin feature/your-feature`
+5. Open a Pull Request
+
+See also [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+---
+
+## 🧾 License
+
+This project is licensed under the **GNU Affero General Public License v3 (AGPL-3.0)** — see the `LICENSE` file for details.  
+Use, modify, and share freely; if this is hosted as a service by someone else, modifications must be published as well.
+
+---
+
+## 🏷️ Badges (optional)
+
+You can add badges at the top, e.g.,
+
+```markdown
+![License](https://img.shields.io/github/license/Epicer12/RenderLift)
+![Repo Size](https://img.shields.io/github/repo-size/Epicer12/RenderLift)
+```
+
+---
+
+## 📝 Notes
+
+- Update the **Demo Screenshot** once your UI screens are ready.  
+- Add a **CONTRIBUTING.md** and **CODE_OF_CONDUCT.md** if you want community contributions.  
+
+---
+
+## 🏠 Trademark Notice
+
+The project name and branding are trademarks of **Hasun Tissera**.  
+Forks and derivative works may **not use the project name, logo, or branding** without explicit permission.
