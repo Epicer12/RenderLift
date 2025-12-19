@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
             parents: [jobFolderId],
         };
 
-        const origin = req.headers.get("origin") || "http://localhost:3000";
+        const origin = req.headers.get("origin") || process.env.NEXTAUTH_URL || "http://localhost:3000";
 
         const initiateResponse = await fetch(
             "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable",
