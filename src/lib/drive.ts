@@ -35,3 +35,23 @@ export async function findOrCreateFolder(drive: any, name: string, parentId?: st
 
     return folder.data.id!;
 }
+
+export async function listFolders(drive: any, parentId: string) {
+    const response = await drive.files.list({
+        q: `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+        fields: "files(id, name, createdTime)",
+        orderBy: "createdTime desc",
+    });
+    return response.data.files || [];
+}
+
+export async function deleteFile(drive: any, fileId: string) {
+    return await drive.files.delete({ fileId });
+}
+
+export async function renameFile(drive: any, fileId: string, newName: string) {
+    return await drive.files.update({
+        fileId: fileId,
+        requestBody: { name: newName },
+    });
+}

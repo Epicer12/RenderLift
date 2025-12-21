@@ -1,14 +1,18 @@
 "use client"
 
 import { useState } from "react";
+import Link from "next/link";
+import { Folder, Play } from "lucide-react";
 import { LoginButton } from "@/components/LoginButton";
 import { Upload } from "@/components/Upload";
 import { RenderForm, RenderSettings } from "@/components/RenderForm";
+import { JobMonitor } from "@/components/JobMonitor";
 
 export default function Home() {
   const [uploadedFile, setUploadedFile] = useState<{ id: string, name: string } | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [colabLink, setColabLink] = useState<string | null>(null);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
 
   const handleUploadComplete = (file: { id: string, name: string }) => {
     setUploadedFile(file);
@@ -33,6 +37,7 @@ export default function Home() {
       if (!res.ok) throw new Error(data.error || "Failed to create job");
 
       setColabLink(data.notebookUrl);
+      setActiveJobId(data.jobId);
     } catch (error) {
       console.error(error);
       alert("Failed to generate notebook. Check console.");
@@ -43,7 +48,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen p-8 bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100 font-[family-name:var(--font-geist-sans)]">
-      <div className="max-w-4xl mx-auto space-y-12">
+      <div className="max-w-5xl mx-auto space-y-12">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -52,36 +57,64 @@ export default function Home() {
             </h1>
             <p className="text-gray-500 mt-1">Free Cloud Rendering for Blender</p>
           </div>
-          <LoginButton />
+          <div className="flex items-center gap-4">
+            <Link
+              href="/jobs"
+              className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+            >
+              <Folder className="w-4 h-4" />
+              Manage Jobs
+            </Link>
+            <LoginButton />
+          </div>
         </div>
 
-        {/* Success / Colab Link State */}
-        {colabLink ? (
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-8 text-center space-y-4">
-            <div className="w-16 h-16 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center mx-auto text-3xl">
-              🚀
+        {/* Success / Monitoring State */}
+        {colabLink && activeJobId ? (
+          <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-8 text-center space-y-4">
+              <div className="w-16 h-16 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center mx-auto text-3xl">
+                🚀
+              </div>
+              <h2 className="text-2xl font-bold text-green-800 dark:text-green-300">Ready to Render!</h2>
+              <p className="text-gray-600 dark:text-gray-300 max-w-sm mx-auto">
+                Your notebook is ready. We'll take you directly to the <strong>Google Colab</strong> editor to start your GPU session.
+              </p>
+              <div className="flex flex-wrap justify-center gap-4 pt-2">
+                <a
+                  href={colabLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-500/30 transition-all active:scale-95"
+                >
+                  <Play className="w-5 h-5 fill-current" />
+                  Launch Cloud Notebook
+                </a>
+                <button
+                  onClick={() => { setUploadedFile(null); setColabLink(null); setActiveJobId(null); }}
+                  className="px-6 py-3 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
+                >
+                  New Project
+                </button>
+              </div>
+              <div className="pt-4 space-y-2">
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-900/30 py-2 px-4 rounded-full inline-block">
+                  STEP: Click "Runtime" → "Run All" once the editor loads.
+                </p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black">
+                  No extension required • Desktop only
+                </p>
+              </div>
             </div>
-            <h2 className="text-2xl font-bold text-green-800 dark:text-green-300">Ready to Render!</h2>
-            <p className="text-gray-600 dark:text-gray-300">
-              Your secure notebook has been generated and uploaded back to your Drive.
-            </p>
-            <a
-              href={colabLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Open Google Colab Notebook
-            </a>
-            <p className="text-sm text-gray-500 pt-4">
-              (Click "Runtime" -&gt; "Run All" once you are in Colab)
-            </p>
-            <button
-              onClick={() => { setUploadedFile(null); setColabLink(null); }}
-              className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 underline mt-2"
-            >
-              Start New Render
-            </button>
+
+            {/* Final Output Display */}
+            <div className="pt-8 border-t border-gray-200 dark:border-neutral-800">
+              <div className="flex items-center gap-2 mb-6">
+                <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                <h2 className="text-xl font-black tracking-tight">Render Output</h2>
+              </div>
+              <JobMonitor jobId={activeJobId} />
+            </div>
           </div>
         ) : (
           /* Workflow */

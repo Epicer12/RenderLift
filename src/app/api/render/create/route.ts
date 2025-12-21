@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
         const notebookFile = await drive.files.create({
             requestBody: {
                 name: "Render_Job.ipynb",
-                mimeType: "application/vnd.google-colab", // This mimeType makes it openable in Colab
+                mimeType: "application/vnd.google-colab",
                 parents: [jobFolderId],
             },
             media: {
@@ -60,10 +60,30 @@ export async function POST(req: NextRequest) {
             fields: "id, webViewLink",
         });
 
+        // 6. Save Job Config for monitoring
+        await drive.files.create({
+            requestBody: {
+                name: "render_config.json",
+                mimeType: "application/json",
+                parents: [jobFolderId],
+            },
+            media: {
+                mimeType: "application/json",
+                body: JSON.stringify({
+                    fileName,
+                    fileId,
+                    settings,
+                    createdAt: new Date().toISOString(),
+                }),
+            },
+        });
+
+        console.log("RENDER_CREATE_SUCCESS: Returning jobId", jobFolderId);
         return NextResponse.json({
             success: true,
-            jobId: jobFolderName,
-            notebookUrl: notebookFile.data.webViewLink
+            jobId: jobFolderId,
+            jobName: jobFolderName,
+            notebookUrl: `https://colab.research.google.com/drive/${notebookFile.data.id}`
         });
 
     } catch (error: any) {
