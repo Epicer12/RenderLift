@@ -111,9 +111,14 @@ export default function JobsPage() {
                         {jobs.map((job) => (
                             <div key={job.id} className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 group transition-shadow hover:shadow-md">
                                 <div className="flex items-center gap-4 min-w-0 flex-1">
-                                    <Link href={`/jobs/${job.id}`} className="w-12 h-12 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 shrink-0 hover:bg-blue-100 transition-colors">
+                                    <a
+                                        href={`https://drive.google.com/drive/folders/${job.id}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="w-12 h-12 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 shrink-0 hover:bg-blue-100 transition-colors"
+                                    >
                                         <Folder className="w-6 h-6" />
-                                    </Link>
+                                    </a>
                                     <div className="min-w-0 flex-1">
                                         {renamingId === job.id ? (
                                             <div className="flex items-center gap-2">
@@ -130,9 +135,14 @@ export default function JobsPage() {
                                             </div>
                                         ) : (
                                             <h3 className="text-lg font-semibold truncate flex items-center gap-2 group/title">
-                                                <Link href={`/jobs/${job.id}`} className="hover:text-blue-600 transition-colors truncate">
+                                                <a
+                                                    href={`https://drive.google.com/drive/folders/${job.id}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="hover:text-blue-600 transition-colors truncate"
+                                                >
                                                     {job.name}
-                                                </Link>
+                                                </a>
                                                 <button
                                                     onClick={() => { setRenamingId(job.id); setNewName(job.name); }}
                                                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded transition-all"
@@ -150,12 +160,14 @@ export default function JobsPage() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Link
-                                        href={`/jobs/${job.id}`}
+                                    <a
+                                        href={`https://drive.google.com/drive/folders/${job.id}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
                                         className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
                                     >
                                         View Output
-                                    </Link>
+                                    </a>
                                     <button
                                         onClick={() => handleDelete(job.id)}
                                         className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex items-center gap-2"

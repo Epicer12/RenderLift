@@ -6,7 +6,6 @@ import { Folder, Play } from "lucide-react";
 import { LoginButton } from "@/components/LoginButton";
 import { Upload } from "@/components/Upload";
 import { RenderForm, RenderSettings } from "@/components/RenderForm";
-import { JobMonitor } from "@/components/JobMonitor";
 
 export default function Home() {
   const [uploadedFile, setUploadedFile] = useState<{ id: string, name: string } | null>(null);
@@ -109,11 +108,30 @@ export default function Home() {
 
             {/* Final Output Display */}
             <div className="pt-8 border-t border-gray-200 dark:border-neutral-800">
-              <div className="flex items-center gap-2 mb-6">
-                <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                <h2 className="text-xl font-black tracking-tight">Render Output</h2>
+              <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-gray-200 dark:border-neutral-800 p-8 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-blue-500/5 blur-3xl rounded-full" />
+
+                <div className="relative z-10 flex flex-col items-center text-center py-4">
+                  <div className="w-16 h-16 bg-blue-50 dark:bg-blue-500/10 rounded-2xl flex items-center justify-center mb-6">
+                    <Folder className="w-8 h-8 text-blue-600 dark:text-blue-500" />
+                  </div>
+
+                  <h2 className="text-2xl font-black tracking-tight mb-3">Access Your Renders</h2>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm max-w-sm mb-8 leading-relaxed">
+                    Once the render starts in Colab, the output files will appear in your Drive folder automatically.
+                  </p>
+
+                  <a
+                    href={`https://drive.google.com/drive/folders/${activeJobId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-2 px-8 py-3 bg-gray-900 dark:bg-white text-white dark:text-black rounded-xl font-bold text-sm hover:scale-105 transition-all active:scale-95"
+                  >
+                    <Folder className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+                    Open Render Folder
+                  </a>
+                </div>
               </div>
-              <JobMonitor jobId={activeJobId} />
             </div>
           </div>
         ) : (
