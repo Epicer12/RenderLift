@@ -16,9 +16,7 @@
     "next-auth": "^4.24.13",
     "react": "19.2.1",
     "react-dom": "19.2.1",
-    "react-dropzone": "^14.3.8",
-    "tailwind-merge": "^3.4.0",
-    "zod": "^4.2.1"
+    "react-dropzone": "^14.3.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -31,7 +31,7 @@ export function generateNotebookJson(
             cell_type: "markdown",
             metadata: {},
             source: [
-                "# RenderLift - Cloud Render Job\n",
+                "# RenderLift - Cloud Render Lift\n",
                 `**File**: ${fileName}\n`,
                 `**Settings**: Frames ${startFrame}-${endFrame} | ${format} | ${device}\n`,
                 "Run the cells below to start rendering!"

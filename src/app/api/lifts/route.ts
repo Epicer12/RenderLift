@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { getDriveClient, findOrCreateFolder, listFolders, deleteFile, renameFile } from "@/lib/drive";
 
-// GET /api/jobs - List all jobs
+// GET /api/lifts - List all lifts
 export async function GET(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session || !(session as any).accessToken) {
@@ -13,59 +13,59 @@ export async function GET(req: NextRequest) {
     try {
         const drive = getDriveClient((session as any).accessToken);
 
-        // Find RenderLift/Jobs
+        // Find RenderLift/Lifts
         const rootId = await findOrCreateFolder(drive, "RenderLift");
-        const jobsId = await findOrCreateFolder(drive, "Jobs", rootId);
+        const liftsId = await findOrCreateFolder(drive, "Lifts", rootId);
 
-        const jobs = await listFolders(drive, jobsId);
+        const lifts = await listFolders(drive, liftsId);
 
-        return NextResponse.json({ jobs });
+        return NextResponse.json({ lifts });
     } catch (error: any) {
-        console.error("ListJobsError", error);
+        console.error("ListLiftsError", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
 
-// DELETE /api/jobs - Delete a job
+// DELETE /api/lifts - Delete a lift
 export async function DELETE(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session || !(session as any).accessToken) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { jobId } = await req.json();
-    if (!jobId) {
-        return NextResponse.json({ error: "Job ID required" }, { status: 400 });
+    const { liftId } = await req.json();
+    if (!liftId) {
+        return NextResponse.json({ error: "Lift ID required" }, { status: 400 });
     }
 
     try {
         const drive = getDriveClient((session as any).accessToken);
-        await deleteFile(drive, jobId);
+        await deleteFile(drive, liftId);
         return NextResponse.json({ success: true });
     } catch (error: any) {
-        console.error("DeleteJobError", error);
+        console.error("DeleteLiftError", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
 
-// PATCH /api/jobs - Rename a job
+// PATCH /api/lifts - Rename a lift
 export async function PATCH(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session || !(session as any).accessToken) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { jobId, newName } = await req.json();
-    if (!jobId || !newName) {
-        return NextResponse.json({ error: "Job ID and New Name required" }, { status: 400 });
+    const { liftId, newName } = await req.json();
+    if (!liftId || !newName) {
+        return NextResponse.json({ error: "Lift ID and New Name required" }, { status: 400 });
     }
 
     try {
         const drive = getDriveClient((session as any).accessToken);
-        await renameFile(drive, jobId, newName);
+        await renameFile(drive, liftId, newName);
         return NextResponse.json({ success: true });
     } catch (error: any) {
-        console.error("RenameJobError", error);
+        console.error("RenameLiftError", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

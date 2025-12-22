@@ -30,28 +30,28 @@ export async function POST(req: NextRequest) {
         if (!parents || parents.length === 0) {
             return NextResponse.json({ error: "File has no parent folder" }, { status: 400 });
         }
-        const jobFolderId = parents[0];
+        const liftFolderId = parents[0];
 
-        // 2. Get Job Folder Name (e.g. "Job_123456789")
-        const jobFolderInfo = await drive.files.get({
-            fileId: jobFolderId,
+        // 2. Get Lift Folder Name (e.g. "Lift_123456789")
+        const liftFolderInfo = await drive.files.get({
+            fileId: liftFolderId,
             fields: 'name'
         });
-        const jobFolderName = jobFolderInfo.data.name;
+        const liftFolderName = liftFolderInfo.data.name;
 
         // 3. Construct Path for Colab
-        // Structure enforced by Upload API: RenderLift/Jobs/[JobFolderName]
-        const fullFolderPath = `RenderLift/Jobs/${jobFolderName}`;
+        // Structure enforced by Upload API: RenderLift/Lifts/[LiftFolderName]
+        const fullFolderPath = `RenderLift/Lifts/${liftFolderName}`;
 
         // 4. Generate Notebook Content with Caching Logic
         const notebookJson = generateNotebookJson(fileName, fileId, fullFolderPath, settings);
 
-        // 5. Upload Notebook to the SAME Job Folder
+        // 5. Upload Notebook to the SAME Lift Folder
         const notebookFile = await drive.files.create({
             requestBody: {
-                name: "Render_Job.ipynb",
+                name: "Render_Lift.ipynb",
                 mimeType: "application/vnd.google-colab",
-                parents: [jobFolderId],
+                parents: [liftFolderId],
             },
             media: {
                 mimeType: "application/json",
@@ -60,12 +60,12 @@ export async function POST(req: NextRequest) {
             fields: "id, webViewLink",
         });
 
-        // 6. Save Job Config for monitoring
+        // 6. Save Lift Config for monitoring
         await drive.files.create({
             requestBody: {
                 name: "render_config.json",
                 mimeType: "application/json",
-                parents: [jobFolderId],
+                parents: [liftFolderId],
             },
             media: {
                 mimeType: "application/json",
@@ -78,11 +78,11 @@ export async function POST(req: NextRequest) {
             },
         });
 
-        console.log("RENDER_CREATE_SUCCESS: Returning jobId", jobFolderId);
+        console.log("RENDER_CREATE_SUCCESS: Returning liftId", liftFolderId);
         return NextResponse.json({
             success: true,
-            jobId: jobFolderId,
-            jobName: jobFolderName,
+            liftId: liftFolderId,
+            liftName: liftFolderName,
             notebookUrl: `https://colab.research.google.com/drive/${notebookFile.data.id}`
         });
 

@@ -33,20 +33,20 @@ export async function POST(req: NextRequest) {
 
         const drive = getDriveClient(session.accessToken);
 
-        // 1. Ensure Folder Structure: RenderLift -> Jobs -> Job_[Timestamp]
+        // 1. Ensure Folder Structure: RenderLift -> Lifts -> Lift_[Timestamp]
         const rootId = await findOrCreateFolder(drive, "RenderLift");
-        const jobsId = await findOrCreateFolder(drive, "Jobs", rootId);
+        const liftsId = await findOrCreateFolder(drive, "Lifts", rootId);
 
-        // Create a specific folder for this job
-        const jobName = `Job_${Date.now()}`;
-        const jobFolderId = await findOrCreateFolder(drive, jobName, jobsId);
+        // Create a specific folder for this lift
+        const liftName = `Lift_${Date.now()}`;
+        const liftFolderId = await findOrCreateFolder(drive, liftName, liftsId);
 
         // 2. Initiate Resumable Upload Session
         // We use raw fetch here because we need the 'Location' header from the response
         const metadata = {
             name: name,
             mimeType: type,
-            parents: [jobFolderId],
+            parents: [liftFolderId],
         };
 
         const origin = req.headers.get("origin") || process.env.NEXTAUTH_URL || "http://localhost:3000";

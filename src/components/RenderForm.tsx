@@ -1,8 +1,7 @@
-"use client"
-
-import { useState } from 'react'
-import { Settings, Play, Info } from 'lucide-react'
+import { useState, useEffect } from "react";
+import { Settings, Play, Info, Box, Monitor, Calendar, Layers, Save } from 'lucide-react'
 import clsx from 'clsx'
+import { getUserDefaults, saveUserDefaults } from "@/lib/userSettings";
 
 interface RenderFormProps {
     fileName: string | null
@@ -21,176 +20,201 @@ export interface RenderSettings {
 }
 
 export function RenderForm({ fileName, onStartRender, disabled }: RenderFormProps) {
-    const [settings, setSettings] = useState<RenderSettings>({
-        version: '4.2.0',
-        startFrame: 1,
-        endFrame: 1,
-        format: 'PNG',
-        device: 'CUDA',
-        generateVideo: false
-    })
+    const [settings, setSettings] = useState<RenderSettings>(getUserDefaults())
 
     const isRangeInvalid = settings.startFrame > settings.endFrame;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        if (isRangeInvalid) {
-            alert("Start frame cannot be greater than end frame.");
-            return;
-        }
+        if (isRangeInvalid) return;
         onStartRender(settings)
     }
 
+    const handleSaveDefault = () => {
+        saveUserDefaults(settings);
+    }
+
     return (
-        <div className="w-full max-w-md mx-auto bg-white dark:bg-neutral-900 rounded-lg border border-gray-200 dark:border-neutral-800 p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-6 text-gray-800 dark:text-gray-100">
-                <Settings className="w-5 h-5" />
-                <h2 className="font-semibold text-lg">Render Configuration</h2>
+        <div className="w-full space-y-12">
+            <div className="p-6 bg-surface swiss-border space-y-4">
+                <div className="flex items-start gap-4 text-accent">
+                    <Info className="w-4 h-4 mt-1" />
+                    <div className="space-y-1">
+                        <div className="text-[13px] mono uppercase tracking-widest font-bold">Active Asset</div>
+                        <div className="text-base font-bold truncate max-w-sm">{fileName || "No asset loaded"}</div>
+                    </div>
+                </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-                {/* File Info */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md flex items-start gap-3 text-sm text-blue-700 dark:text-blue-300">
-                    <Info className="w-5 h-5 shrink-0" />
-                    <div>
-                        <p className="font-medium">Selected File:</p>
-                        <p className="truncate opacity-80">{fileName || "No file selected"}</p>
+            <form onSubmit={handleSubmit} className="space-y-10">
+
+                {/* 01: Engine */}
+                <div className="space-y-6">
+                    <div className="flex items-center gap-3 text-foreground-muted">
+                        <Box className="w-4 h-4" />
+                        <span className="text-[13px] mono uppercase tracking-[0.2em] font-bold">01 / Environment</span>
+                    </div>
+                    <div className="grid grid-cols-12 gap-4">
+                        <div className="col-span-12">
+                            <label className="block text-[15px] font-bold uppercase tracking-widest mb-3 opacity-60">Blender Version</label>
+                            <select
+                                value={settings.version}
+                                onChange={(e) => setSettings({ ...settings, version: e.target.value })}
+                                className="w-full px-4 py-3 bg-surface border border-border-subtle focus:border-accent outline-none text-base font-bold transition-colors appearance-none"
+                                disabled={disabled}
+                            >
+                                <option value="2.83.20">2.83.20 (LTS)</option>
+                                <option value="2.93.18">2.93.18 (LTS)</option>
+                                <option value="3.3.15">3.3.15 (LTS)</option>
+                                <option value="3.6.13">3.6.13 (LTS)</option>
+                                <option value="4.0.2">4.0.2</option>
+                                <option value="4.1.1">4.1.1</option>
+                                <option value="4.2.0">4.2.0 (LTS)</option>
+                                <option value="4.3.0">4.3.0</option>
+                                <option value="4.5.3">4.5.3 (Alpha)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                {/* Blender Version */}
-                <div>
-                    <label className="block text-sm font-medium mb-1 dark:text-gray-300">Blender Version</label>
-                    <select
-                        value={settings.version}
-                        onChange={(e) => setSettings({ ...settings, version: e.target.value })}
-                        className="w-full p-2 rounded-md border border-gray-300 dark:border-neutral-700 bg-transparent dark:text-white"
-                        disabled={disabled}
+                {/* 02: Frame Range */}
+                <div className="space-y-6">
+                    <div className="flex items-center gap-3 text-foreground-muted">
+                        <Calendar className="w-4 h-4" />
+                        <span className="text-[13px] mono uppercase tracking-[0.2em] font-bold">02 / Frame Range</span>
+                    </div>
+                    <div className="grid grid-cols-12 gap-4">
+                        <div className="col-span-6">
+                            <label className="block text-[15px] font-bold uppercase tracking-widest mb-3 opacity-60">Start_Frame</label>
+                            <input
+                                type="number"
+                                min={1}
+                                value={settings.startFrame}
+                                onChange={(e) => setSettings({ ...settings, startFrame: parseInt(e.target.value) || 1 })}
+                                className={clsx(
+                                    "w-full px-4 py-3 bg-surface border outline-none text-base mono transition-colors",
+                                    isRangeInvalid ? "border-red-500" : "border-border-subtle focus:border-accent"
+                                )}
+                                disabled={disabled}
+                            />
+                        </div>
+                        <div className="col-span-6">
+                            <label className="block text-[15px] font-bold uppercase tracking-widest mb-3 opacity-60">End_Frame</label>
+                            <input
+                                type="number"
+                                min={1}
+                                value={settings.endFrame}
+                                onChange={(e) => setSettings({ ...settings, endFrame: parseInt(e.target.value) || 1 })}
+                                className={clsx(
+                                    "w-full px-4 py-3 bg-surface border outline-none text-base mono transition-colors",
+                                    isRangeInvalid ? "border-red-500" : "border-border-subtle focus:border-accent"
+                                )}
+                                disabled={disabled}
+                            />
+                        </div>
+                        {isRangeInvalid && (
+                            <div className="col-span-12 text-[13px] mono text-red-500 uppercase tracking-widest mt-2">
+                                Critical Error: Start frame &gt; End frame
+                            </div>
+                        )}
+                        {settings.endFrame > settings.startFrame && (
+                            <div className="col-span-12 mt-4 flex items-center gap-3 p-4 border border-border-subtle border-dashed">
+                                <input
+                                    type="checkbox"
+                                    disabled={disabled}
+                                    id="gen-video"
+                                    checked={!!settings.generateVideo}
+                                    onChange={(e) => setSettings({ ...settings, generateVideo: e.target.checked })}
+                                    className="w-4 h-4 border-2 border-border-subtle bg-surface accent-accent rounded-none cursor-pointer"
+                                />
+                                <label htmlFor="gen-video" className="text-[13px] uppercase font-bold tracking-widest cursor-pointer opacity-80">
+                                    Include Video_Merge Node
+                                </label>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* 03: Output */}
+                <div className="space-y-6">
+                    <div className="flex items-center gap-3 text-foreground-muted">
+                        <Monitor className="w-4 h-4" />
+                        <span className="text-[13px] mono uppercase tracking-[0.2em] font-bold">03 / Output Format</span>
+                    </div>
+                    <div className="grid grid-cols-12 gap-4">
+                        <div className="col-span-6">
+                            <label className="block text-[15px] font-bold uppercase tracking-widest mb-3 opacity-60">Format</label>
+                            <select
+                                value={settings.format}
+                                onChange={(e) => setSettings({ ...settings, format: e.target.value })}
+                                className="w-full px-4 py-3 bg-surface border border-border-subtle focus:border-accent outline-none text-base font-bold transition-colors appearance-none"
+                                disabled={disabled}
+                            >
+                                <option value="PNG">PNG</option>
+                                <option value="JPEG">JPEG</option>
+                                <option value="OPEN_EXR">OpenEXR</option>
+                            </select>
+                        </div>
+                        <div className="col-span-6">
+                            <label className="block text-[15px] font-bold uppercase tracking-widest mb-3 opacity-60">Engine</label>
+                            <select
+                                value={settings.device}
+                                onChange={(e) => setSettings({ ...settings, device: e.target.value })}
+                                className="w-full px-4 py-3 bg-surface border border-border-subtle focus:border-accent outline-none text-base font-bold transition-colors appearance-none"
+                                disabled={disabled}
+                            >
+                                <option value="CUDA">CUDA</option>
+                                <option value="OPTIX">OptiX</option>
+                                <option value="CPU">CPU</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 04: Quality */}
+                <div className="space-y-6">
+                    <div className="flex items-center gap-3 text-foreground-muted">
+                        <Layers className="w-4 h-4" />
+                        <span className="text-[13px] mono uppercase tracking-[0.2em] font-bold">04 / Global Samples</span>
+                    </div>
+                    <div>
+                        <input
+                            type="number"
+                            min={1}
+                            placeholder="Leave empty for project default"
+                            value={settings.samples || ''}
+                            onChange={(e) => setSettings({ ...settings, samples: e.target.value ? parseInt(e.target.value) : undefined })}
+                            className="w-full px-4 py-3 bg-surface border border-border-subtle focus:border-accent outline-none text-base mono transition-colors"
+                            disabled={disabled}
+                        />
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-4 w-full md:w-auto">
+                    <button
+                        type="submit"
+                        disabled={disabled || !fileName || isRangeInvalid}
+                        className={clsx(
+                            "px-10 py-5 bg-accent text-white font-bold uppercase tracking-widest text-base transition-all active:scale-95 shadow-[0_0_20px_rgba(79,140,255,0.1)]",
+                            (disabled || !fileName || isRangeInvalid) && "opacity-20 cursor-not-allowed"
+                        )}
                     >
-                        <option value="2.83.20">2.83.20 (LTS)</option>
-                        <option value="2.93.18">2.93.18 (LTS)</option>
-                        <option value="3.3.15">3.3.15 (LTS)</option>
-                        <option value="3.6.13">3.6.13 (LTS)</option>
-                        <option value="4.0.2">4.0.2</option>
-                        <option value="4.1.1">4.1.1</option>
-                        <option value="4.2.0">4.2.0 (LTS)</option>
-                        <option value="4.3.0">4.3.0</option>
-                        <option value="4.5.3">4.5.3 (Alpha)</option>
-                    </select>
+                        Generate Render Lift
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleSaveDefault}
+                        className="p-5 border border-border-subtle hover:border-accent hover:text-accent transition-all active:scale-95 group"
+                        title="Save settings as profile default"
+                    >
+                        <Save className="w-5 h-5" />
+                    </button>
                 </div>
-
-                {/* Frame Range */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium mb-1 dark:text-gray-300">Start Frame</label>
-                        <input
-                            type="number"
-                            min={1}
-                            value={settings.startFrame}
-                            onChange={(e) => setSettings({ ...settings, startFrame: parseInt(e.target.value) || 1 })}
-                            className={clsx(
-                                "w-full p-2 rounded-md border bg-transparent dark:text-white outline-none transition-colors",
-                                isRangeInvalid ? "border-red-500 bg-red-50 dark:bg-red-900/10" : "border-gray-300 dark:border-neutral-700"
-                            )}
-                            disabled={disabled}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1 dark:text-gray-300">End Frame</label>
-                        <input
-                            type="number"
-                            min={1}
-                            value={settings.endFrame}
-                            onChange={(e) => setSettings({ ...settings, endFrame: parseInt(e.target.value) || 1 })}
-                            className={clsx(
-                                "w-full p-2 rounded-md border bg-transparent dark:text-white outline-none transition-colors",
-                                isRangeInvalid ? "border-red-500 bg-red-50 dark:bg-red-900/10" : "border-gray-300 dark:border-neutral-700"
-                            )}
-                            disabled={disabled}
-                        />
-                    </div>
-                </div>
-                {isRangeInvalid && (
-                    <p className="text-xs text-red-500 flex items-center gap-1">
-                        Start frame must be less than or equal to End frame
-                    </p>
-                )}
-
-                {/* Optional Video Creation (Only if multi-frame) */}
-                {settings.endFrame > settings.startFrame && (
-                    <div className="flex items-center gap-2 p-3 bg-blue-50/50 dark:bg-blue-900/10 rounded-md border border-blue-100 dark:border-blue-900/30">
-                        <input
-                            type="checkbox"
-                            disabled={disabled}
-                            id="gen-video"
-                            checked={!!settings.generateVideo}
-                            onChange={(e) => setSettings({ ...settings, generateVideo: e.target.checked })}
-                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                        />
-                        <label htmlFor="gen-video" className="text-sm dark:text-gray-300 cursor-pointer">
-                            Include <strong>Video Generation</strong> cell in notebook (Optional)
-                        </label>
+                {!fileName && (
+                    <div className="text-[13px] mono text-red-500 uppercase tracking-widest mt-4">
+                        No source asset linked
                     </div>
                 )}
-
-                {/* Format, Device & Samples */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium mb-1 dark:text-gray-300">Format</label>
-                        <select
-                            value={settings.format}
-                            onChange={(e) => setSettings({ ...settings, format: e.target.value })}
-                            className="w-full p-2 rounded-md border border-gray-300 dark:border-neutral-700 bg-transparent dark:text-white"
-                            disabled={disabled}
-                        >
-                            <option value="PNG">PNG</option>
-                            <option value="JPEG">JPEG</option>
-                            <option value="OPEN_EXR">OpenEXR</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1 dark:text-gray-300">Device</label>
-                        <select
-                            value={settings.device}
-                            onChange={(e) => setSettings({ ...settings, device: e.target.value })}
-                            className="w-full p-2 rounded-md border border-gray-300 dark:border-neutral-700 bg-transparent dark:text-white"
-                            disabled={disabled}
-                        >
-                            <option value="CUDA">CUDA</option>
-                            <option value="OPTIX">OptiX</option>
-                            <option value="CPU">CPU</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium mb-1 dark:text-gray-300">
-                        Samples <span className="text-xs font-normal opacity-60">(Optional - overrides file settings)</span>
-                    </label>
-                    <input
-                        type="number"
-                        min={1}
-                        placeholder="e.g. 128 (Leave empty for file default)"
-                        value={settings.samples || ''}
-                        onChange={(e) => setSettings({ ...settings, samples: e.target.value ? parseInt(e.target.value) : undefined })}
-                        className="w-full p-2 rounded-md border border-gray-300 dark:border-neutral-700 bg-transparent dark:text-white outline-none focus:border-blue-500 transition-colors"
-                        disabled={disabled}
-                    />
-                </div>
-
-                <button
-                    type="submit"
-                    disabled={disabled || !fileName || isRangeInvalid}
-                    className={clsx(
-                        "w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-all mt-4",
-                        disabled || !fileName || isRangeInvalid
-                            ? "bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-neutral-800 dark:text-neutral-600"
-                            : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg"
-                    )}
-                >
-                    <Play className="w-5 h-5 fill-current" />
-                    Generate Colab Notebook
-                </button>
             </form>
         </div>
     )

@@ -1,172 +1,203 @@
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Folder, Play } from "lucide-react";
-import { LoginButton } from "@/components/LoginButton";
-import { Upload } from "@/components/Upload";
-import { RenderForm, RenderSettings } from "@/components/RenderForm";
+import { Trash2, Edit2, Loader2, Zap, Activity, Plus } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { LandingPage } from "@/components/LandingPage";
+
+interface Lift {
+  id: string;
+  name: string;
+  createdTime: string;
+}
 
 export default function Home() {
-  const [uploadedFile, setUploadedFile] = useState<{ id: string, name: string } | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [colabLink, setColabLink] = useState<string | null>(null);
-  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const { data: session } = useSession();
 
-  const handleUploadComplete = (file: { id: string, name: string }) => {
-    setUploadedFile(file);
-  };
+  // Dashboard Stats & List
+  const [lifts, setLifts] = useState<Lift[]>([]);
+  const [loadingLifts, setLoadingLifts] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
 
-  const handleStartRender = async (settings: RenderSettings) => {
-    if (!uploadedFile) return;
+  useEffect(() => {
+    if (session) {
+      fetchLifts();
+    }
+  }, [session]);
 
-    setIsGenerating(true);
+  const fetchLifts = async () => {
+    setLoadingLifts(true);
     try {
-      const res = await fetch("/api/render/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileId: uploadedFile.id,
-          fileName: uploadedFile.name,
-          settings: settings
-        })
-      });
-
+      const res = await fetch("/api/lifts");
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create job");
-
-      setColabLink(data.notebookUrl);
-      setActiveJobId(data.jobId);
+      if (data.lifts) {
+        setLifts(data.lifts);
+      }
     } catch (error) {
-      console.error(error);
-      alert("Failed to generate notebook. Check console.");
+      console.error("Failed to fetch lifts", error);
     } finally {
-      setIsGenerating(false);
+      setLoadingLifts(false);
     }
   };
 
+  const handleDelete = async (liftId: string) => {
+    if (!confirm("Are you sure? This deletes the folder from your Drive.")) return;
+    try {
+      const res = await fetch("/api/lifts", {
+        method: "DELETE",
+        body: JSON.stringify({ liftId }),
+      });
+      if (res.ok) setLifts(lifts.filter(l => l.id !== liftId));
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleRename = async (liftId: string) => {
+    if (!newName.trim()) return;
+    try {
+      const res = await fetch("/api/lifts", {
+        method: "PATCH",
+        body: JSON.stringify({ liftId, newName }),
+      });
+      if (res.ok) {
+        setLifts(lifts.map(l => l.id === liftId ? { ...l, name: newName } : l));
+        setRenamingId(null);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // Compute "Energy" Estimate
+  const totalLifts = (lifts && lifts.length) || 0;
+  const estimatedEnergy = Math.min(100, (totalLifts * 12.5));
+
+  if (!session) {
+    return <LandingPage />;
+  }
+
   return (
-    <main className="min-h-screen p-8 bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100 font-[family-name:var(--font-geist-sans)]">
-      <div className="max-w-5xl mx-auto space-y-12">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-              RenderLift
-            </h1>
-            <p className="text-gray-500 mt-1">Free Cloud Rendering for Blender</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/jobs"
-              className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
-            >
-              <Folder className="w-4 h-4" />
-              Manage Jobs
-            </Link>
-            <LoginButton />
-          </div>
-        </div>
+    <main className="min-h-screen">
+      <div className="max-w-[1440px] mx-auto px-8 md:px-16 py-12">
+        <div className="space-y-24">
 
-        {/* Success / Monitoring State */}
-        {colabLink && activeJobId ? (
-          <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
-            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-8 text-center space-y-4">
-              <div className="w-16 h-16 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center mx-auto text-3xl">
-                🚀
-              </div>
-              <h2 className="text-2xl font-bold text-green-800 dark:text-green-300">Ready to Render!</h2>
-              <p className="text-gray-600 dark:text-gray-300 max-w-sm mx-auto">
-                Your notebook is ready. We'll take you directly to the <strong>Google Colab</strong> editor to start your GPU session.
-              </p>
-              <div className="flex flex-wrap justify-center gap-4 pt-2">
-                <a
-                  href={colabLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-500/30 transition-all active:scale-95"
-                >
-                  <Play className="w-5 h-5 fill-current" />
-                  Launch Cloud Notebook
-                </a>
-                <button
-                  onClick={() => { setUploadedFile(null); setColabLink(null); setActiveJobId(null); }}
-                  className="px-6 py-3 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
-                >
-                  New Project
-                </button>
-              </div>
-              <div className="pt-4 space-y-2">
-                <p className="text-xs text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-900/30 py-2 px-4 rounded-full inline-block">
-                  STEP: Click "Runtime" → "Run All" once the editor loads.
-                </p>
-                <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black">
-                  No extension required • Desktop only
-                </p>
-              </div>
-            </div>
-
-            {/* Final Output Display */}
-            <div className="pt-8 border-t border-gray-200 dark:border-neutral-800">
-              <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-gray-200 dark:border-neutral-800 p-8 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-blue-500/5 blur-3xl rounded-full" />
-
-                <div className="relative z-10 flex flex-col items-center text-center py-4">
-                  <div className="w-16 h-16 bg-blue-50 dark:bg-blue-500/10 rounded-2xl flex items-center justify-center mb-6">
-                    <Folder className="w-8 h-8 text-blue-600 dark:text-blue-500" />
-                  </div>
-
-                  <h2 className="text-2xl font-black tracking-tight mb-3">Access Your Renders</h2>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm max-w-sm mb-8 leading-relaxed">
-                    Once the render starts in Colab, the output files will appear in your Drive folder automatically.
-                  </p>
-
-                  <a
-                    href={`https://drive.google.com/drive/folders/${activeJobId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center gap-2 px-8 py-3 bg-gray-900 dark:bg-white text-white dark:text-black rounded-xl font-bold text-sm hover:scale-105 transition-all active:scale-95"
-                  >
-                    <Folder className="w-4 h-4 group-hover:rotate-12 transition-transform" />
-                    Open Render Folder
-                  </a>
+          {/* Row 1: Operations Data */}
+          <div className="grid grid-cols-12 gap-8">
+            <div className="col-span-12 md:col-span-4 bg-surface swiss-border p-8 space-y-6">
+              <div className="flex justify-between items-start">
+                <div className="space-y-1">
+                  <div className="text-[13px] mono text-foreground-muted uppercase tracking-widest">Compute Load</div>
+                  <div className="text-3xl font-black">{estimatedEnergy}%</div>
                 </div>
+                <Zap className="text-accent w-6 h-6" />
+              </div>
+              <div className="w-full bg-background h-1">
+                <div className="bg-accent h-full transition-all duration-1000" style={{ width: `${estimatedEnergy}%` }} />
+              </div>
+              <div className="text-[12px] mono text-foreground-muted uppercase tracking-wider leading-relaxed">
+                Estimate based on session activity. Refreshes every 24h.
               </div>
             </div>
-          </div>
-        ) : (
-          /* Workflow */
-          <div className="grid gap-12">
 
-            {/* Step 1: Upload */}
-            <div className={uploadedFile ? "opacity-50 pointer-events-none grayscale transition-all" : ""}>
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 text-sm">1</span>
-                Upload .blend File
-              </h2>
-              <Upload onUploadComplete={handleUploadComplete} />
+            <div className="col-span-12 md:col-span-4 bg-surface swiss-border p-8 space-y-6">
+              <div className="flex justify-between items-start">
+                <div className="space-y-1">
+                  <div className="text-[13px] mono text-foreground-muted uppercase tracking-widest">Active Lifts</div>
+                  <div className="text-3xl font-black">{totalLifts}</div>
+                </div>
+                <Activity className="text-foreground-muted w-6 h-6" />
+              </div>
+              <div className="text-[12px] mono text-foreground-muted uppercase tracking-wider leading-relaxed">
+                Total render instances registered in your Google Drive storage.
+              </div>
             </div>
 
-            {/* Step 2: Configure */}
-            {uploadedFile && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-sm">2</span>
-                  Configure Job
-                </h2>
-                <RenderForm
-                  fileName={uploadedFile.name}
-                  onStartRender={handleStartRender}
-                  disabled={isGenerating}
-                />
-                {isGenerating && (
-                  <p className="text-center text-blue-500 mt-4 animate-pulse">Generating Notebook...</p>
-                )}
+            <div className="col-span-12 md:col-span-4 bg-surface border border-accent/20 p-8 flex flex-col justify-between group hover:border-accent transition-colors">
+              <div className="text-base font-bold leading-tight">Start a new secure render pipeline using remote cloud nodes.</div>
+              <Link
+                href="/new"
+                className="mt-6 flex items-center gap-3 text-[15px] font-black uppercase tracking-widest text-accent group-hover:gap-5 transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                New Operation_
+              </Link>
+            </div>
+          </div>
+
+          {/* Row 2: Recent History */}
+          <div className="space-y-8 pb-24">
+            <div className="flex justify-between items-end border-b border-border-subtle pb-4">
+              <h2 className="text-[15px] font-black uppercase tracking-[0.2em] text-foreground-muted">Recent Render History</h2>
+              <div className="text-[13px] mono text-foreground-muted uppercase">Sync Status: Online</div>
+            </div>
+
+            {loadingLifts ? (
+              <div className="py-24 flex items-center gap-4 text-accent animate-pulse">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-[15px] font-bold uppercase tracking-widest">Polling Google Drive Data...</span>
+              </div>
+            ) : (!lifts || lifts.length === 0) ? (
+              <div className="py-32 border border-border-subtle border-dashed flex flex-col items-center justify-center text-center space-y-6">
+                <div className="text-[13px] mono text-foreground-muted uppercase">Storage Empty</div>
+                <p className="text-base max-w-xs text-foreground-muted leading-relaxed">No render lifts found. Click "New Operation" to begin.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-1">
+                {lifts.map((lift, i) => (
+                  <div
+                    key={lift.id}
+                    className="grid grid-cols-12 gap-8 items-center bg-surface swiss-border border-transparent hover:border-border-subtle p-6 transition-all group"
+                  >
+                    <div className="col-span-1 text-[13px] mono text-foreground-muted">0{i + 1}</div>
+                    <div className="col-span-11 md:col-span-5">
+                      {renamingId === lift.id ? (
+                        <div className="flex items-center gap-4">
+                          <input
+                            value={newName}
+                            onChange={(e) => setNewName(e.target.value)}
+                            className="bg-background border border-accent px-3 py-1 text-base font-bold w-full outline-none"
+                            autoFocus
+                            onKeyDown={(e) => e.key === 'Enter' && handleRename(lift.id)}
+                          />
+                          <button onClick={() => handleRename(lift.id)} className="text-[13px] mono text-accent font-bold hover:underline">SAVE</button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-4">
+                          <h3 className="text-base font-bold font-mono tracking-tight truncate">{lift.name}</h3>
+                          <button onClick={() => { setRenamingId(lift.id); setNewName(lift.name); }} className="opacity-0 group-hover:opacity-60 hover:text-accent transition-all">
+                            <Edit2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="col-span-6 md:col-span-3 text-[13px] mono text-foreground-muted uppercase">
+                      {new Date(lift.createdTime).toLocaleDateString()} / {new Date(lift.createdTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    <div className="col-span-6 md:col-span-3 flex justify-end gap-6 items-center">
+                      <a
+                        href={`https://drive.google.com/drive/folders/${lift.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[13px] font-black uppercase tracking-widest text-accent hover:text-white hover:bg-accent px-2 py-1 transition-all"
+                      >
+                        View_Output
+                      </a>
+                      <button
+                        onClick={() => handleDelete(lift.id)}
+                        className="opacity-0 group-hover:opacity-100 text-red-500/40 hover:text-red-500 transition-all"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
-        )}
-
+        </div>
       </div>
     </main>
   );

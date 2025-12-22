@@ -114,51 +114,58 @@ export function Upload({ onUploadComplete }: UploadProps) {
     <div
       {...getRootProps()}
       className={clsx(
-        "border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-all relative overflow-hidden",
-        isDragActive ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-300 dark:border-neutral-700 hover:border-gray-400",
-        uploading && "opacity-90 cursor-not-allowed border-blue-400"
+        "swiss-border p-12 text-left cursor-pointer transition-all relative overflow-hidden bg-surface",
+        isDragActive ? "border-accent" : "border-border-subtle hover:border-foreground-muted",
+        uploading && "opacity-60 cursor-not-allowed"
       )}
     >
-      {/* Progress Bar Background */}
+      {/* Percentage Overlay (Mono) */}
       {uploading && (
-        <div
-          className="absolute bottom-0 left-0 h-2 bg-blue-500 transition-all duration-300 ease-out"
-          style={{ width: `${progress}%` }}
-        />
+        <div className="absolute top-4 right-4 mono text-[13px] text-accent font-black tracking-widest">
+          SYNCING_DRIVE: {progress}%
+        </div>
       )}
 
       <input {...getInputProps()} />
-      <div className="flex flex-col items-center gap-4">
-        {uploading ? (
-          <div className="flex flex-col items-center">
-            <div className="relative">
-              <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
-              <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-blue-700">
-                {progress}%
-              </span>
-            </div>
-          </div>
-        ) : status === 'success' ? (
-          <CheckCircle className="w-12 h-12 text-green-500" />
-        ) : status === 'error' ? (
-          <AlertCircle className="w-12 h-12 text-red-500" />
-        ) : (
-          <UploadCloud className={clsx("w-12 h-12", isDragActive ? "text-blue-500" : "text-gray-400")} />
-        )}
-
-        <div className="space-y-1">
+      <div className="flex flex-col items-start gap-6">
+        <div className="flex items-center gap-4">
           {uploading ? (
-            <p className="text-blue-500 font-medium">Uploading to Drive... {progress}%</p>
+            <Loader2 className="w-5 h-5 text-accent animate-spin" />
           ) : status === 'success' ? (
-            <p className="text-green-500 font-medium">{message}</p>
+            <CheckCircle className="w-5 h-5 text-green-500" />
           ) : status === 'error' ? (
-            <p className="text-red-500 font-medium">{message}</p>
+            <AlertCircle className="w-5 h-5 text-red-500" />
+          ) : (
+            <UploadCloud className={clsx("w-5 h-5", isDragActive ? "text-accent" : "text-foreground-muted")} />
+          )}
+          <span className="text-[13px] mono text-foreground-muted uppercase tracking-[0.2em]">
+            {uploading ? "Operation in progress" : status === 'success' ? "Operation successful" : "Source selection"}
+          </span>
+        </div>
+
+        <div className="space-y-2">
+          {uploading ? (
+            <div className="space-y-4 w-full min-w-[300px]">
+              <p className="text-xl font-bold uppercase tracking-tight">Uploading Assets...</p>
+              <div className="w-full h-[2px] bg-border-subtle relative overflow-hidden">
+                <div
+                  className="absolute h-full bg-accent transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+          ) : status === 'success' ? (
+            <p className="text-xl font-bold uppercase tracking-tight text-green-500">{message}</p>
+          ) : status === 'error' ? (
+            <p className="text-xl font-bold uppercase tracking-tight text-red-500">{message}</p>
           ) : (
             <>
-              <p className="text-gray-700 dark:text-gray-300 font-medium">
-                {isDragActive ? "Drop the .blend file here" : "Drag 'n' drop your .blend file here"}
+              <p className="text-2xl font-bold tracking-tight">
+                {isDragActive ? "Release to initialize" : "Select or drop .blend file"}
               </p>
-              <p className="text-sm text-gray-500">or click to select files</p>
+              <p className="text-[15px] mono text-foreground-muted uppercase tracking-widest">
+                Max file size: 2GB • Format: .blend
+              </p>
             </>
           )}
         </div>

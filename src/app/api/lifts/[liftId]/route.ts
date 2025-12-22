@@ -5,45 +5,45 @@ import { getDriveClient, findOrCreateFolder } from "@/lib/drive";
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: Promise<{ jobId: string }> }
+    { params }: { params: Promise<{ liftId: string }> }
 ) {
     const session = await getServerSession(authOptions) as any;
     if (!session || !session.accessToken) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { jobId } = await params;
+    const { liftId } = await params;
 
     try {
         const drive = getDriveClient(session.accessToken);
 
-        // 1. Find the job folder
-        let jobFolder: any = null;
+        // 1. Find the lift folder
+        let liftFolder: any = null;
         try {
-            const res = await drive.files.get({ fileId: jobId, fields: "id, name" });
-            jobFolder = res.data;
+            const res = await drive.files.get({ fileId: liftId, fields: "id, name" });
+            liftFolder = res.data;
         } catch {
             const rootId = await findOrCreateFolder(drive, "RenderLift");
-            const jobsId = await findOrCreateFolder(drive, "Jobs", rootId);
+            const liftsId = await findOrCreateFolder(drive, "Lifts", rootId);
             const nameSearch = await drive.files.list({
-                q: `'${jobsId}' in parents and name = '${jobId}' and trashed = false`,
+                q: `'${liftsId}' in parents and name = '${liftId}' and trashed = false`,
                 fields: "files(id, name)",
             });
             if (nameSearch.data.files && nameSearch.data.files.length > 0) {
-                jobFolder = nameSearch.data.files[0];
+                liftFolder = nameSearch.data.files[0];
             } else {
                 return NextResponse.json({ notFound: true }, { status: 404 });
             }
         }
 
-        const jobFolderId = jobFolder.id!;
+        const liftFolderId = liftFolder.id!;
 
         // 2. Find Renders folder - try multiple methods
         let rendersFolderId = null;
 
         // Method 1: Direct search by name
         const directSearch = await drive.files.list({
-            q: `name = 'Renders' and '${jobFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+            q: `name = 'Renders' and '${liftFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
             fields: "files(id)",
         });
 
@@ -52,7 +52,7 @@ export async function GET(
         } else {
             // Method 2: List all and find
             const allFiles = await drive.files.list({
-                q: `'${jobFolderId}' in parents and trashed = false`,
+                q: `'${liftFolderId}' in parents and trashed = false`,
                 fields: "files(id, name, mimeType)",
             });
 
@@ -94,8 +94,8 @@ export async function GET(
         }
 
         return NextResponse.json({
-            jobId: jobFolderId,
-            name: jobFolder.name,
+            liftId: liftFolderId,
+            name: liftFolder.name,
             finalVideo,
             latestFrame
         });
