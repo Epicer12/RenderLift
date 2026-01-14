@@ -60,7 +60,7 @@ export default function NewLiftPage() {
 
     return (
         <main className="min-h-screen">
-            <div className="max-w-[1440px] mx-auto px-8 md:px-16 py-24">
+            <div className="max-w-[1440px] mx-auto px-4 md:px-16 py-12 md:py-24">
 
                 {colabLink && activeLiftId ? (
                     /* Success Screen */
@@ -85,12 +85,12 @@ export default function NewLiftPage() {
                                     </div>
                                 ))}
                             </div>
-                            <div className="flex flex-wrap gap-4 pt-8">
+                            <div className="flex flex-col md:flex-row gap-4 pt-8">
                                 <a
                                     href={colabLink}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="px-10 py-5 bg-accent text-white font-bold uppercase tracking-widest text-sm hover:bg-blue-600 transition-all active:scale-95 shadow-[0_0_30px_rgba(79,140,255,0.2)] flex items-center gap-4"
+                                    className="px-10 py-5 bg-accent text-white font-bold uppercase tracking-widest text-sm hover:bg-blue-600 transition-all active:scale-95 shadow-[0_0_30px_rgba(79,140,255,0.2)] flex items-center justify-center md:justify-start gap-4 text-center"
                                 >
                                     <Play className="w-5 h-5 fill-current" />
                                     Open Live Notebook
@@ -99,7 +99,7 @@ export default function NewLiftPage() {
                                     href={`https://drive.google.com/drive/folders/${activeLiftId}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="px-10 py-5 bg-surface swiss-border text-foreground font-bold uppercase tracking-widest text-sm hover:border-foreground transition-all active:scale-95 flex items-center gap-4"
+                                    className="px-10 py-5 bg-surface swiss-border text-foreground font-bold uppercase tracking-widest text-sm hover:border-foreground transition-all active:scale-95 flex items-center justify-center md:justify-start gap-4 text-center"
                                 >
                                     <Folder className="w-5 h-5" />
                                     View Drive Output
@@ -128,7 +128,7 @@ export default function NewLiftPage() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-12 gap-16 animate-in slide-in-from-bottom-12 duration-700">
+                        <div className="grid grid-cols-12 gap-8 md:gap-16 animate-in slide-in-from-bottom-12 duration-700">
                             <div className="col-span-12 md:col-span-8">
                                 {!uploadedFile ? (
                                     <div className="space-y-12">

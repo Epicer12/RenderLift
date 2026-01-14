@@ -84,7 +84,7 @@ export function RenderForm({ fileName, onStartRender, disabled }: RenderFormProp
                         <span className="text-[13px] mono uppercase tracking-[0.2em] font-bold">02 / Frame Range</span>
                     </div>
                     <div className="grid grid-cols-12 gap-4">
-                        <div className="col-span-6">
+                        <div className="col-span-12 sm:col-span-6">
                             <label className="block text-[15px] font-bold uppercase tracking-widest mb-3 opacity-60">Start_Frame</label>
                             <input
                                 type="number"
@@ -98,7 +98,7 @@ export function RenderForm({ fileName, onStartRender, disabled }: RenderFormProp
                                 disabled={disabled}
                             />
                         </div>
-                        <div className="col-span-6">
+                        <div className="col-span-12 sm:col-span-6">
                             <label className="block text-[15px] font-bold uppercase tracking-widest mb-3 opacity-60">End_Frame</label>
                             <input
                                 type="number"
@@ -142,7 +142,7 @@ export function RenderForm({ fileName, onStartRender, disabled }: RenderFormProp
                         <span className="text-[13px] mono uppercase tracking-[0.2em] font-bold">03 / Output Format</span>
                     </div>
                     <div className="grid grid-cols-12 gap-4">
-                        <div className="col-span-6">
+                        <div className="col-span-12 sm:col-span-6">
                             <label className="block text-[15px] font-bold uppercase tracking-widest mb-3 opacity-60">Format</label>
                             <select
                                 value={settings.format}
@@ -155,7 +155,7 @@ export function RenderForm({ fileName, onStartRender, disabled }: RenderFormProp
                                 <option value="OPEN_EXR">OpenEXR</option>
                             </select>
                         </div>
-                        <div className="col-span-6">
+                        <div className="col-span-12 sm:col-span-6">
                             <label className="block text-[15px] font-bold uppercase tracking-widest mb-3 opacity-60">Engine</label>
                             <select
                                 value={settings.device}
@@ -190,12 +190,12 @@ export function RenderForm({ fileName, onStartRender, disabled }: RenderFormProp
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4 w-full md:w-auto">
+                <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
                     <button
                         type="submit"
                         disabled={disabled || !fileName || isRangeInvalid}
                         className={clsx(
-                            "px-10 py-5 bg-accent text-white font-bold uppercase tracking-widest text-base transition-all active:scale-95 shadow-[0_0_20px_rgba(79,140,255,0.1)]",
+                            "w-full md:w-auto px-10 py-5 bg-accent text-white font-bold uppercase tracking-widest text-base transition-all active:scale-95 shadow-[0_0_20px_rgba(79,140,255,0.1)]",
                             (disabled || !fileName || isRangeInvalid) && "opacity-20 cursor-not-allowed"
                         )}
                     >
@@ -204,7 +204,7 @@ export function RenderForm({ fileName, onStartRender, disabled }: RenderFormProp
                     <button
                         type="button"
                         onClick={handleSaveDefault}
-                        className="p-5 border border-border-subtle hover:border-accent hover:text-accent transition-all active:scale-95 group"
+                        className="w-full md:w-auto p-5 border border-border-subtle hover:border-accent hover:text-accent transition-all active:scale-95 group flex items-center justify-center"
                         title="Save settings as profile default"
                     >
                         <Save className="w-5 h-5" />

@@ -7,10 +7,10 @@ import { Logo } from "./Logo";
 export function LandingPage() {
     return (
         <main className="min-h-[calc(100-64px)] bg-background text-foreground selection:bg-accent selection:text-white">
-            <div className="max-w-[1440px] mx-auto px-8 md:px-16 py-16">
+            <div className="max-w-[1440px] mx-auto px-4 md:px-16 py-16">
                 <div className="grid grid-cols-12 gap-8 items-start animate-in fade-in duration-700">
                     <div className="col-span-12 md:col-span-8 space-y-12">
-                        <div className="flex items-center gap-4 text-[17px] font-bold tracking-tighter uppercase mb-24">
+                        <div className="flex items-center gap-4 text-[17px] font-bold tracking-tighter uppercase mb-12 md:mb-24">
                             <Logo className="w-8 h-8" />
                             <div>
                                 <span className="text-orange-500">Render</span>
