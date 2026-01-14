@@ -37,11 +37,10 @@ It gives Blender users access to cloud GPUs without complex setup or paying for 
 
 ## 📸 Demo / Screenshot
 
-*(Add a screenshot or embed a small image/GIF showing the app — optional but very helpful.)*  
 Example Markdown:
 
 ```markdown
-![RenderLift Demo](./demo.gif)
+![RenderLift Demo](./showcase.png)
 ```
 
 ---
@@ -129,8 +128,6 @@ npm run start
 4. Start rendering on the cloud GPU  
 5. Download resulting output files
 
-*(Include screenshots or UI examples if available.)*
-
 ---
 
 ## 🤝 Contributing
@@ -152,17 +149,6 @@ See also [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 This project is licensed under the **GNU Affero General Public License v3 (AGPL-3.0)** — see the `LICENSE` file for details.  
 Use, modify, and share freely; if this is hosted as a service by someone else, modifications must be published as well.
-
----
-
-## 🏷️ Badges (optional)
-
-You can add badges at the top, e.g.,
-
-```markdown
-![License](https://img.shields.io/github/license/Epicer12/RenderLift)
-![Repo Size](https://img.shields.io/github/repo-size/Epicer12/RenderLift)
-```
 
 ---
 
