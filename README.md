@@ -175,5 +175,5 @@ You can add badges at the top, e.g.,
 
 ## 🏠 Trademark Notice
 
-The project name and branding are trademarks of **Hasun Tissera**.  
+The project name and branding are trademarks of **Hasun Tisera**.  
 Forks and derivative works may **not use the project name, logo, or branding** without explicit permission.

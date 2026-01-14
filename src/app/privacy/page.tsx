@@ -4,7 +4,7 @@ export default function PrivacyPolicy() {
     return (
         <div className="max-w-4xl mx-auto px-4 py-8 prose dark:prose-invert">
             <h1 className="text-3xl font-bold mb-4">Privacy Policy – RenderLift</h1>
-            <p className="text-gray-500 mb-8">Last updated: December 19, 2025</p>
+            <p className="text-gray-500 mb-8">Last updated: January 16 2026</p>
 
             <p className="mb-6">
                 RenderLift ("we", "our", or "the Service") is a web application that helps users render Blender projects using their own Google resources. This Privacy Policy explains how information is collected, used, and protected when you use RenderLift.
@@ -70,7 +70,7 @@ export default function PrivacyPolicy() {
             <p className="mb-4">
                 If you have any questions about this Privacy Policy, you may contact:
             </p>
-            <p className="font-semibold">Email: editehasun17@gmail.com</p>
+            <p className="font-semibold">Email: hntsoftwares@gmail.com</p>
         </div>
     );
 }

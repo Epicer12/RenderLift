@@ -4,7 +4,7 @@ export default function TermsOfService() {
     return (
         <div className="max-w-4xl mx-auto px-4 py-8 prose dark:prose-invert">
             <h1 className="text-3xl font-bold mb-4">Terms of Service – RenderLift</h1>
-            <p className="text-gray-500 mb-8">Last updated: December 19, 2025</p>
+            <p className="text-gray-500 mb-8">Last updated: January 14, 2026</p>
 
             <p className="mb-6">
                 By accessing or using RenderLift, you agree to the following Terms of Service. If you do not agree with these terms, please do not use the Service.
@@ -72,7 +72,7 @@ export default function TermsOfService() {
             <p className="mb-4">
                 For questions regarding these Terms, please contact:
             </p>
-            <p className="font-semibold">Email: editehasun17@gmail.com</p>
+            <p className="font-semibold">Email: hntsoftware@gmail.com</p>
         </div>
     );
 }
