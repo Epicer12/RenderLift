@@ -37,11 +37,7 @@ It gives Blender users access to cloud GPUs without complex setup or paying for 
 
 ## 📸 Demo / Screenshot
 
-Example Markdown:
-
-```markdown
 ![RenderLift Demo](./showcase.png)
-```
 
 ---
 
