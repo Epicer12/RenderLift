@@ -9,6 +9,78 @@ interface UploadProps {
   onUploadComplete?: (file: { id: string, name: string }) => void
 }
 
+const CHUNK_SIZE = 8 * 1024 * 1024 // Drive requires a multiple of 256 KiB
+const MAX_RETRIES = 5
+
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+// Resolves with the finished request whatever its status; rejects only on network failure
+function sendToDrive(uploadUrl: string, body: Blob | null, contentRange: string, contentType: string, onProgress?: (loaded: number) => void) {
+  return new Promise<XMLHttpRequest>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('PUT', uploadUrl, true)
+    xhr.setRequestHeader('Content-Range', contentRange)
+    // CRITICAL: Must match the X-Upload-Content-Type set in the API
+    if (body) xhr.setRequestHeader('Content-Type', contentType)
+    if (onProgress) {
+      xhr.upload.onprogress = (e) => onProgress(e.loaded)
+    }
+    xhr.onload = () => resolve(xhr)
+    xhr.onerror = () => reject(new Error('Network error during upload'))
+    xhr.send(body)
+  })
+}
+
+// Uploads the file to a Drive resumable session in chunks. After a dropped connection
+// it asks Drive how much it already has and continues from there.
+async function uploadInChunks(uploadUrl: string, file: File, onProgress: (bytes: number) => void) {
+  const contentType = file.type || 'application/octet-stream'
+  let offset = 0
+  let checkStatus = false
+  let failures = 0
+
+  while (true) {
+    const start = offset
+    let xhr: XMLHttpRequest | null = null
+    try {
+      if (checkStatus) {
+        xhr = await sendToDrive(uploadUrl, null, `bytes */${file.size}`, contentType)
+      } else {
+        const end = Math.min(start + CHUNK_SIZE, file.size)
+        xhr = await sendToDrive(uploadUrl, file.slice(start, end), `bytes ${start}-${end - 1}/${file.size}`, contentType, loaded => onProgress(start + loaded))
+      }
+    } catch {
+      xhr = null
+    }
+
+    if (xhr && (xhr.status === 200 || xhr.status === 201)) {
+      return JSON.parse(xhr.responseText)
+    }
+
+    if (xhr && xhr.status === 308) {
+      // "Range: bytes=0-12345" is what Drive has stored so far; no header means nothing yet
+      const range = xhr.getResponseHeader('Range')
+      offset = range ? parseInt(range.split('-')[1], 10) + 1 : 0
+      onProgress(offset)
+      const wasStatusCheck = checkStatus
+      checkStatus = false
+      if (offset > start) failures = 0
+      if (offset > start || wasStatusCheck) continue
+      // A chunk was sent but Drive stored none of it: count it as a failure so we can't loop forever
+    } else if (xhr && xhr.status > 0 && xhr.status < 500) {
+      // 4xx: the upload session expired or was rejected; retrying won't help
+      console.error('Drive Upload Error', xhr.responseText)
+      throw new Error(`Upload failed (${xhr.status}). Please try again.`)
+    }
+
+    if (++failures > MAX_RETRIES) {
+      throw new Error('Network error during upload. Check your connection and try again.')
+    }
+    await wait(1000 * 2 ** failures)
+    checkStatus = true
+  }
+}
+
 export function Upload({ onUploadComplete }: UploadProps) {
   const { data: session } = useSession()
   const [uploading, setUploading] = useState(false)
@@ -25,6 +97,11 @@ export function Upload({ onUploadComplete }: UploadProps) {
 
     const file = acceptedFiles[0]
     if (!file) return
+    if (file.size === 0) {
+      setStatus('error')
+      setMessage('That file is empty')
+      return
+    }
 
     setUploading(true)
     setProgress(0)
@@ -40,7 +117,8 @@ export function Upload({ onUploadComplete }: UploadProps) {
         },
         body: JSON.stringify({
           name: file.name,
-          type: file.type || 'application/octet-stream' // fallback
+          type: file.type || 'application/octet-stream', // fallback
+          size: file.size
         }),
       })
 
@@ -49,53 +127,24 @@ export function Upload({ onUploadComplete }: UploadProps) {
 
       const uploadUrl = initData.uploadUrl
 
-      // 2. Perform Direct Upload to Google Drive
-      const xhr = new XMLHttpRequest()
-      xhr.open('PUT', uploadUrl, true)
+      // 2. Upload directly to Google Drive in resumable chunks
+      const result = await uploadInChunks(uploadUrl, file, bytes => {
+        setProgress(Math.round((bytes / file.size) * 100))
+      })
 
-      // CRITICAL: Must match the X-Upload-Content-Type set in the API
-      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream')
+      setStatus('success')
+      setMessage('Upload complete!')
 
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          const percentComplete = (e.loaded / e.total) * 100
-          setProgress(Math.round(percentComplete))
-        }
+      if (onUploadComplete) {
+        // The Drive API Resumable Upload response structure
+        // It returns the file metadata
+        onUploadComplete({ id: result.id, name: result.name })
       }
-
-      xhr.onload = () => {
-        if (xhr.status === 200 || xhr.status === 201) {
-          const result = JSON.parse(xhr.responseText)
-          setStatus('success')
-          setMessage('Upload complete!')
-          console.log('Drive Result:', result)
-
-          if (onUploadComplete) {
-            // The Drive API Resumable Upload response structure
-            // It returns the file metadata
-            onUploadComplete({ id: result.id, name: result.name })
-          }
-
-        } else {
-          setStatus('error')
-          setMessage('Upload failed during transfer')
-          console.error('Drive Upload Error', xhr.responseText)
-        }
-        setUploading(false)
-      }
-
-      xhr.onerror = () => {
-        setStatus('error')
-        setMessage('Network error during upload')
-        setUploading(false)
-      }
-
-      xhr.send(file)
-
-    } catch (error: any) {
-      console.error('Upload init error:', error)
+    } catch (error) {
+      console.error('Upload error:', error)
       setStatus('error')
-      setMessage(error.message || 'Upload initialization failed')
+      setMessage((error as Error).message || 'Upload failed')
+    } finally {
       setUploading(false)
     }
   }, [session, onUploadComplete])
@@ -104,7 +153,8 @@ export function Upload({ onUploadComplete }: UploadProps) {
     onDrop,
     accept: {
       'application/x-blender': ['.blend'],
-      'application/zip': ['.zip']
+      'application/zip': ['.zip'],
+      'application/x-zip-compressed': ['.zip'] // Windows reports zips with this type
     },
     maxFiles: 1,
     disabled: uploading
@@ -161,10 +211,10 @@ export function Upload({ onUploadComplete }: UploadProps) {
           ) : (
             <>
               <p className="text-2xl font-bold tracking-tight">
-                {isDragActive ? "Release to initialize" : "Select or drop .blend file"}
+                {isDragActive ? "Release to initialize" : "Select or drop .blend or .zip file"}
               </p>
               <p className="text-[15px] mono text-foreground-muted uppercase tracking-widest">
-                Max file size: 2GB • Format: .blend
+                Max file size: 2GB • Format: .blend, or .zip with textures
               </p>
             </>
           )}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Folder, Play, Info, Loader2, ChevronLeft, Activity } from "lucide-react";
+import { Folder, Play, Info, Loader2, ChevronLeft } from "lucide-react";
 import { Upload } from "@/components/Upload";
 import { RenderForm, RenderSettings } from "@/components/RenderForm";
 import { useSession } from "next-auth/react";
@@ -136,7 +136,7 @@ export default function NewLiftPage() {
                                         <div className="flex items-start gap-4 p-6 bg-surface border-l-2 border-accent/20">
                                             <Info className="w-4 h-4 mt-1 text-accent" />
                                             <p className="text-[13px] mono text-foreground-muted leading-relaxed uppercase tracking-widest">
-                                                Warning: Large scene assets take time to sync. Ensure all linked textures are packed within the .blend file (File &gt; External Data &gt; Pack Resources).
+                                                Warning: Large scene assets take time to sync. Ensure all linked textures are packed within the .blend file (File &gt; External Data &gt; Pack Resources), or upload the project folder as a .zip.
                                             </p>
                                         </div>
                                     </div>
@@ -172,7 +172,7 @@ export default function NewLiftPage() {
                                     </div>
                                     <div className="pt-8 border-t border-border-subtle">
                                         <div className="text-[12px] mono text-foreground-muted uppercase leading-relaxed">
-                                            Instructions: Upload your file, configure properties, and click "Generate". We'll provide a direct link to run the render on NVIDIA hardware.
+                                            Instructions: Upload your file, configure properties, and click &quot;Generate&quot;. We&apos;ll provide a direct link to run the render on NVIDIA hardware.
                                         </div>
                                     </div>
                                 </div>

@@ -142,7 +142,7 @@ export default function Home() {
             ) : (!lifts || lifts.length === 0) ? (
               <div className="py-32 border border-border-subtle border-dashed flex flex-col items-center justify-center text-center space-y-6">
                 <div className="text-[13px] mono text-foreground-muted uppercase">Storage Empty</div>
-                <p className="text-base max-w-xs text-foreground-muted leading-relaxed">No render lifts found. Click "New Operation" to begin.</p>
+                <p className="text-base max-w-xs text-foreground-muted leading-relaxed">No render lifts found. Click &quot;New Operation&quot; to begin.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-1">

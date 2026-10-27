@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
-import { Settings, Play, Info, Box, Monitor, Calendar, Layers, Save } from 'lucide-react'
+import { useState } from "react";
+import { Info, Box, Monitor, Calendar, Layers, Save } from 'lucide-react'
 import clsx from 'clsx'
 import { getUserDefaults, saveUserDefaults } from "@/lib/userSettings";
+import { BLENDER_VERSIONS } from "@/lib/blenderVersions";
 
 interface RenderFormProps {
     fileName: string | null
@@ -9,12 +10,16 @@ interface RenderFormProps {
     disabled: boolean
 }
 
+// SCENE keeps whatever engine the .blend file was saved with
+export type RenderEngine = 'SCENE' | 'CYCLES' | 'EEVEE'
+
 export interface RenderSettings {
     version: string
     startFrame: number
     endFrame: number
     format: string
     device: string
+    engine?: RenderEngine
     generateVideo?: boolean
     samples?: number
 }
@@ -63,15 +68,22 @@ export function RenderForm({ fileName, onStartRender, disabled }: RenderFormProp
                                 className="w-full px-4 py-3 bg-surface border border-border-subtle focus:border-accent outline-none text-base font-bold transition-colors appearance-none"
                                 disabled={disabled}
                             >
-                                <option value="2.83.20">2.83.20 (LTS)</option>
-                                <option value="2.93.18">2.93.18 (LTS)</option>
-                                <option value="3.3.15">3.3.15 (LTS)</option>
-                                <option value="3.6.13">3.6.13 (LTS)</option>
-                                <option value="4.0.2">4.0.2</option>
-                                <option value="4.1.1">4.1.1</option>
-                                <option value="4.2.0">4.2.0 (LTS)</option>
-                                <option value="4.3.0">4.3.0</option>
-                                <option value="4.5.3">4.5.3 (Alpha)</option>
+                                {BLENDER_VERSIONS.map(v => (
+                                    <option key={v.version} value={v.version}>{v.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="col-span-12">
+                            <label className="block text-[15px] font-bold uppercase tracking-widest mb-3 opacity-60">Render Engine</label>
+                            <select
+                                value={settings.engine ?? 'SCENE'}
+                                onChange={(e) => setSettings({ ...settings, engine: e.target.value as RenderEngine })}
+                                className="w-full px-4 py-3 bg-surface border border-border-subtle focus:border-accent outline-none text-base font-bold transition-colors appearance-none"
+                                disabled={disabled}
+                            >
+                                <option value="SCENE">Scene default (as saved in .blend)</option>
+                                <option value="CYCLES">Cycles</option>
+                                <option value="EEVEE">EEVEE</option>
                             </select>
                         </div>
                     </div>
@@ -156,7 +168,7 @@ export function RenderForm({ fileName, onStartRender, disabled }: RenderFormProp
                             </select>
                         </div>
                         <div className="col-span-12 sm:col-span-6">
-                            <label className="block text-[15px] font-bold uppercase tracking-widest mb-3 opacity-60">Engine</label>
+                            <label className="block text-[15px] font-bold uppercase tracking-widest mb-3 opacity-60">Cycles Device</label>
                             <select
                                 value={settings.device}
                                 onChange={(e) => setSettings({ ...settings, device: e.target.value })}
