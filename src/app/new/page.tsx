@@ -136,7 +136,7 @@ export default function NewLiftPage() {
                                         <div className="flex items-start gap-4 p-6 bg-surface border-l-2 border-accent/20">
                                             <Info className="w-4 h-4 mt-1 text-accent" />
                                             <p className="text-[13px] mono text-foreground-muted leading-relaxed uppercase tracking-widest">
-                                                Warning: Large scene assets take time to sync. Ensure all linked textures are packed within the .blend file (File &gt; External Data &gt; Pack Resources).
+                                                Warning: Large scene assets take time to sync. Ensure all linked textures are packed within the .blend file (File &gt; External Data &gt; Pack Resources), or upload the project folder as a .zip.
                                             </p>
                                         </div>
                                     </div>

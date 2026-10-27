@@ -36,6 +36,7 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
             accessToken: refreshedTokens.access_token,
             accessTokenExpires: Date.now() + (refreshedTokens.expires_in as number) * 1000,
             refreshToken: refreshedTokens.refresh_token ?? token.refreshToken, // Fallback to old refresh token
+            error: undefined,
         };
     } catch (error) {
         console.error("RefreshAccessTokenError", error);
@@ -54,7 +55,9 @@ export const authOptions: AuthOptions = {
             authorization: {
                 params: {
                     scope: "openid email profile https://www.googleapis.com/auth/drive.file",
-                    prompt: "consent",
+                    // No forced "consent" prompt: returning users sign in silently.
+                    // Google only issues a refresh token on consent, so when it is missing
+                    // the client re-runs sign-in with prompt=consent (see SessionGuard).
                     access_type: "offline", // Essential for getting a refresh token
                     response_type: "code"
                 }
@@ -65,18 +68,13 @@ export const authOptions: AuthOptions = {
         async jwt({ token, account, user }) {
             // Initial sign in
             if (account && user) {
-                console.log("ACCOUNT TOKENS:", {
-                    access: account.access_token,
-                    refresh: account.refresh_token,
-                    expires_in: account.expires_in,
-                });
-
                 return {
                     ...token,
                     accessToken: account.access_token,
                     accessTokenExpires: Date.now() + ((account as any).expires_in ?? 3600) * 1000,
                     refreshToken: account.refresh_token,
                     user,
+                    error: account.refresh_token ? undefined : "MissingRefreshToken",
                 };
             }
 
@@ -89,8 +87,9 @@ export const authOptions: AuthOptions = {
             return refreshAccessToken(token);
         },
         async session({ session, token }) {
+            // Never hand out a token we know is stale; API routes then answer 401
             // @ts-ignore
-            session.accessToken = token.accessToken;
+            session.accessToken = token.error ? undefined : token.accessToken;
             // @ts-ignore
             session.error = token.error;
             return session;

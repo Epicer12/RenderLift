@@ -18,16 +18,13 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions) as any;
 
     if (!session || !session.accessToken) {
-        console.log("Upload Check: No session or token found", { session });
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("Upload Check: Token present, length:", session.accessToken.length);
-
     try {
-        const { name, type } = await req.json();
+        const { name, type, size } = await req.json();
 
-        if (!name || !type) {
+        if (!name || !type || !Number.isFinite(size) || size <= 0) {
             return NextResponse.json({ error: "Missing file metadata" }, { status: 400 });
         }
 
@@ -59,7 +56,7 @@ export async function POST(req: NextRequest) {
                     "Authorization": `Bearer ${session.accessToken}`,
                     "Content-Type": "application/json",
                     "X-Upload-Content-Type": type,
-                    "X-Upload-Content-Length": "0", // For initiation, the content length of the metadata is 0
+                    "X-Upload-Content-Length": String(size), // Total bytes the browser will upload
                     "Origin": origin, // CRITICAL: Tells Google to allow CORS for this origin
                 },
                 body: JSON.stringify(metadata),

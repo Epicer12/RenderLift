@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { getDriveClient, findOrCreateFolder } from "@/lib/drive";
+import { getDriveClient, findOrCreateFolder, escapeQuery } from "@/lib/drive";
 
 export async function GET(
     req: NextRequest,
@@ -26,7 +26,7 @@ export async function GET(
             const rootId = await findOrCreateFolder(drive, "RenderLift");
             const liftsId = await findOrCreateFolder(drive, "Lifts", rootId);
             const nameSearch = await drive.files.list({
-                q: `'${liftsId}' in parents and name = '${liftId}' and trashed = false`,
+                q: `'${liftsId}' in parents and name = '${escapeQuery(liftId)}' and trashed = false`,
                 fields: "files(id, name)",
             });
             if (nameSearch.data.files && nameSearch.data.files.length > 0) {

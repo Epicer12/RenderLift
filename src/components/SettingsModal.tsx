@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { X, Save, RefreshCw } from "lucide-react";
 import { getUserDefaults, saveUserDefaults } from "@/lib/userSettings";
-import { RenderSettings } from "@/components/RenderForm";
+import { RenderSettings, RenderEngine } from "@/components/RenderForm";
+import { BLENDER_VERSIONS } from "@/lib/blenderVersions";
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -47,15 +48,23 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                             onChange={(e) => setSettings({ ...settings, version: e.target.value })}
                             className="w-full px-4 py-3 bg-background border border-border-subtle focus:border-accent outline-none text-sm font-bold transition-colors appearance-none"
                         >
-                            <option value="2.83.20">2.83.20 (LTS)</option>
-                            <option value="2.93.18">2.93.18 (LTS)</option>
-                            <option value="3.3.15">3.3.15 (LTS)</option>
-                            <option value="3.6.13">3.6.13 (LTS)</option>
-                            <option value="4.0.2">4.0.2</option>
-                            <option value="4.1.1">4.1.1</option>
-                            <option value="4.2.0">4.2.0 (LTS)</option>
-                            <option value="4.3.0">4.3.0</option>
-                            <option value="4.5.3">4.5.3 (Alpha)</option>
+                            {BLENDER_VERSIONS.map(v => (
+                                <option key={v.version} value={v.version}>{v.label}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Render Engine */}
+                    <div className="space-y-4">
+                        <label className="block text-[10px] mono font-bold uppercase tracking-widest opacity-60">Default Render Engine</label>
+                        <select
+                            value={settings.engine ?? 'SCENE'}
+                            onChange={(e) => setSettings({ ...settings, engine: e.target.value as RenderEngine })}
+                            className="w-full px-4 py-3 bg-background border border-border-subtle focus:border-accent outline-none text-sm font-bold transition-colors appearance-none"
+                        >
+                            <option value="SCENE">Scene default (as saved in .blend)</option>
+                            <option value="CYCLES">Cycles</option>
+                            <option value="EEVEE">EEVEE</option>
                         </select>
                     </div>
 
@@ -75,7 +84,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         </div>
                         {/* Engine */}
                         <div className="space-y-4">
-                            <label className="block text-[10px] mono font-bold uppercase tracking-widest opacity-60">Default Engine</label>
+                            <label className="block text-[10px] mono font-bold uppercase tracking-widest opacity-60">Default Cycles Device</label>
                             <select
                                 value={settings.device}
                                 onChange={(e) => setSettings({ ...settings, device: e.target.value })}

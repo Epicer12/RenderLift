@@ -7,12 +7,15 @@ export const getDriveClient = (accessToken: string) => {
     return google.drive({ version: 'v3', auth });
 };
 
+// Escape a value for use inside a single-quoted Drive query string
+export const escapeQuery = (value: string) => value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+
 export async function findOrCreateFolder(drive: any, name: string, parentId?: string): Promise<string> {
     const query = [
         `mimeType = 'application/vnd.google-apps.folder'`,
-        `name = '${name}'`,
+        `name = '${escapeQuery(name)}'`,
         `trashed = false`,
-        parentId ? `'${parentId}' in parents` : `'root' in parents`
+        parentId ? `'${escapeQuery(parentId)}' in parents` : `'root' in parents`
     ].join(' and ');
 
     const search = await drive.files.list({
@@ -38,7 +41,7 @@ export async function findOrCreateFolder(drive: any, name: string, parentId?: st
 
 export async function listFolders(drive: any, parentId: string) {
     const response = await drive.files.list({
-        q: `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+        q: `'${escapeQuery(parentId)}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
         fields: "files(id, name, createdTime)",
         orderBy: "createdTime desc",
     });
