@@ -54,7 +54,7 @@ export function LandingPage() {
                             Developer Note_
                         </div>
                         <p className="text-base text-foreground-muted leading-relaxed max-w-4xl font-mono">
-                            RenderLift was built to solve the "GPU bottleneck" for independent artists. By bridging the gap between local project files and massive cloud compute nodes, we turn a standard Google account into a high-performance render farm. This project is in active development—focusing on extreme Swiss minimalism and pure technical efficiency.
+                            RenderLift was built to solve the &quot;GPU bottleneck&quot; for independent artists. By bridging the gap between local project files and massive cloud compute nodes, we turn a standard Google account into a high-performance render farm. This project is in active development—focusing on extreme Swiss minimalism and pure technical efficiency.
                         </p>
                     </div>
                 </div>

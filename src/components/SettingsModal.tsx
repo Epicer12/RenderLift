@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { X, Save, RefreshCw } from "lucide-react";
 import { getUserDefaults, saveUserDefaults } from "@/lib/userSettings";
 import { RenderSettings, RenderEngine } from "@/components/RenderForm";

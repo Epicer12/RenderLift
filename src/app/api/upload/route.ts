@@ -1,21 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { getDriveClient, findOrCreateFolder } from "@/lib/drive";
-import { Readable } from "stream";
-
-// Helper to convert Web Stream/Buffer to Node Readable stream for Google Drive API
-function webToNodeStream(webStream: ReadableStream | ArrayBuffer) {
-    if (webStream instanceof ArrayBuffer) {
-        return Readable.from(Buffer.from(webStream));
-    }
-    return Readable.fromWeb(webStream as any);
-}
-
 import { authOptions } from "@/lib/auth";
 
-
 export async function POST(req: NextRequest) {
-    const session = await getServerSession(authOptions) as any;
+    const session = await getServerSession(authOptions);
 
     if (!session || !session.accessToken) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -76,8 +65,8 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ uploadUrl });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("Upload Init Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: (error as Error).message }, { status: 500 });
     }
 }

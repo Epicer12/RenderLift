@@ -140,10 +140,10 @@ export function Upload({ onUploadComplete }: UploadProps) {
         // It returns the file metadata
         onUploadComplete({ id: result.id, name: result.name })
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Upload error:', error)
       setStatus('error')
-      setMessage(error.message || 'Upload failed')
+      setMessage((error as Error).message || 'Upload failed')
     } finally {
       setUploading(false)
     }

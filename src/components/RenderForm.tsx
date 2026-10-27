@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Settings, Play, Info, Box, Monitor, Calendar, Layers, Save } from 'lucide-react'
+import { useState } from "react";
+import { Info, Box, Monitor, Calendar, Layers, Save } from 'lucide-react'
 import clsx from 'clsx'
 import { getUserDefaults, saveUserDefaults } from "@/lib/userSettings";
 import { BLENDER_VERSIONS } from "@/lib/blenderVersions";

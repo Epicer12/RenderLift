@@ -1,4 +1,4 @@
-import { google } from 'googleapis';
+import { google, drive_v3 } from 'googleapis';
 
 export const getDriveClient = (accessToken: string) => {
     const auth = new google.auth.OAuth2();
@@ -10,7 +10,7 @@ export const getDriveClient = (accessToken: string) => {
 // Escape a value for use inside a single-quoted Drive query string
 export const escapeQuery = (value: string) => value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 
-export async function findOrCreateFolder(drive: any, name: string, parentId?: string): Promise<string> {
+export async function findOrCreateFolder(drive: drive_v3.Drive, name: string, parentId?: string): Promise<string> {
     const query = [
         `mimeType = 'application/vnd.google-apps.folder'`,
         `name = '${escapeQuery(name)}'`,
@@ -39,7 +39,7 @@ export async function findOrCreateFolder(drive: any, name: string, parentId?: st
     return folder.data.id!;
 }
 
-export async function listFolders(drive: any, parentId: string) {
+export async function listFolders(drive: drive_v3.Drive, parentId: string) {
     const response = await drive.files.list({
         q: `'${escapeQuery(parentId)}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
         fields: "files(id, name, createdTime)",
@@ -48,11 +48,11 @@ export async function listFolders(drive: any, parentId: string) {
     return response.data.files || [];
 }
 
-export async function deleteFile(drive: any, fileId: string) {
+export async function deleteFile(drive: drive_v3.Drive, fileId: string) {
     return await drive.files.delete({ fileId });
 }
 
-export async function renameFile(drive: any, fileId: string, newName: string) {
+export async function renameFile(drive: drive_v3.Drive, fileId: string, newName: string) {
     return await drive.files.update({
         fileId: fileId,
         requestBody: { name: newName },

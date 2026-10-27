@@ -10,7 +10,7 @@ const RECONSENT_COOLDOWN_MS = 5 * 60 * 1000
 // send the user through the consent screen once to get a fresh one.
 function SessionGuard() {
     const { data: session } = useSession()
-    const error = (session as { error?: string } | null)?.error
+    const error = session?.error
 
     useEffect(() => {
         if (!error) return

@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { getDriveClient, findOrCreateFolder, escapeQuery } from "@/lib/drive";
+import { drive_v3 } from "googleapis";
 
 export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ liftId: string }> }
 ) {
-    const session = await getServerSession(authOptions) as any;
+    const session = await getServerSession(authOptions);
     if (!session || !session.accessToken) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -18,7 +19,7 @@ export async function GET(
         const drive = getDriveClient(session.accessToken);
 
         // 1. Find the lift folder
-        let liftFolder: any = null;
+        let liftFolder: drive_v3.Schema$File | null = null;
         try {
             const res = await drive.files.get({ fileId: liftId, fields: "id, name" });
             liftFolder = res.data;
@@ -36,7 +37,10 @@ export async function GET(
             }
         }
 
-        const liftFolderId = liftFolder.id!;
+        if (!liftFolder?.id) {
+            return NextResponse.json({ notFound: true }, { status: 404 });
+        }
+        const liftFolderId = liftFolder.id;
 
         // 2. Find Renders folder - try multiple methods
         let rendersFolderId = null;
@@ -100,8 +104,8 @@ export async function GET(
             latestFrame
         });
 
-    } catch (error: any) {
-        console.error("API Error:", error.message);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        console.error("API Error:", (error as Error).message);
+        return NextResponse.json({ error: (error as Error).message }, { status: 500 });
     }
 }

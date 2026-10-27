@@ -5,7 +5,7 @@ import { getDriveClient } from "@/lib/drive";
 import { generateNotebookJson } from "@/lib/notebook";
 
 export async function POST(req: NextRequest) {
-    const session = await getServerSession(authOptions) as any;
+    const session = await getServerSession(authOptions);
 
     if (!session || !session.accessToken) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -86,8 +86,8 @@ export async function POST(req: NextRequest) {
             notebookUrl: `https://colab.research.google.com/drive/${notebookFile.data.id}`
         });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("Render Creation Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: (error as Error).message }, { status: 500 });
     }
 }

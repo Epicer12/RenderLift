@@ -71,7 +71,7 @@ export const authOptions: AuthOptions = {
                 return {
                     ...token,
                     accessToken: account.access_token,
-                    accessTokenExpires: Date.now() + ((account as any).expires_in ?? 3600) * 1000,
+                    accessTokenExpires: Date.now() + (typeof account.expires_in === "number" ? account.expires_in : 3600) * 1000,
                     refreshToken: account.refresh_token,
                     user,
                     error: account.refresh_token ? undefined : "MissingRefreshToken",
@@ -88,9 +88,7 @@ export const authOptions: AuthOptions = {
         },
         async session({ session, token }) {
             // Never hand out a token we know is stale; API routes then answer 401
-            // @ts-ignore
             session.accessToken = token.error ? undefined : token.accessToken;
-            // @ts-ignore
             session.error = token.error;
             return session;
         },
