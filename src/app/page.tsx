@@ -1,15 +1,38 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Trash2, Edit2, Loader2, Zap, Activity, Plus } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { LandingPage } from "@/components/LandingPage";
+import type { LiftInfo, LiftStatus } from "@/lib/liftStatus";
 
 interface Lift {
   id: string;
   name: string;
   createdTime: string;
+}
+
+const STATUS_LABEL: Record<LiftStatus, string> = {
+  not_started: "Not started",
+  rendering: "Rendering",
+  done: "Done",
+};
+
+const STATUS_STYLE: Record<LiftStatus, string> = {
+  not_started: "text-foreground-muted",
+  rendering: "text-accent animate-pulse",
+  done: "text-green-500",
+};
+
+function timeAgo(iso: string | null): string {
+  if (!iso) return "";
+  const mins = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60000));
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
 }
 
 export default function Home() {
@@ -20,27 +43,66 @@ export default function Home() {
   const [loadingLifts, setLoadingLifts] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
+  // Per-lift render status, filled in after the list loads. Missing = still loading or unavailable.
+  const [infos, setInfos] = useState<Record<string, LiftInfo>>({});
 
-  useEffect(() => {
-    if (session) {
-      fetchLifts();
+  const fetchInfo = useCallback(async (liftId: string) => {
+    try {
+      const res = await fetch(`/api/lifts/${liftId}`);
+      if (!res.ok) return;
+      const d = await res.json();
+      const info: LiftInfo = {
+        status: d.status,
+        frameCount: d.frameCount ?? 0,
+        hasVideo: !!d.finalVideo,
+        latestFrameTime: d.latestFrameTime ?? null,
+        thumbnailLink: d.latestFrame?.thumbnailLink ?? null,
+      };
+      setInfos(prev => ({ ...prev, [liftId]: info }));
+    } catch {
+      // Status is optional; the row still works without it.
     }
-  }, [session]);
+  }, []);
 
-  const fetchLifts = async () => {
+  // A few at a time so a long list doesn't fire dozens of Drive requests at once.
+  const fetchInfos = useCallback(async (ids: string[]) => {
+    const queue = [...ids];
+    const worker = async () => {
+      for (let id = queue.shift(); id; id = queue.shift()) await fetchInfo(id);
+    };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+  }, [fetchInfo]);
+
+  const fetchLifts = useCallback(async () => {
     setLoadingLifts(true);
     try {
       const res = await fetch("/api/lifts");
       const data = await res.json();
       if (data.lifts) {
         setLifts(data.lifts);
+        fetchInfos(data.lifts.map((l: Lift) => l.id));
       }
     } catch (error) {
       console.error("Failed to fetch lifts", error);
     } finally {
       setLoadingLifts(false);
     }
-  };
+  }, [fetchInfos]);
+
+  useEffect(() => {
+    if (session) {
+      fetchLifts();
+    }
+  }, [session, fetchLifts]);
+
+  // While something looks like it's rendering, check again every 30s.
+  const renderingIds = Object.keys(infos).filter(id => infos[id].status === "rendering");
+  const renderingKey = renderingIds.join(",");
+  useEffect(() => {
+    if (!renderingKey) return;
+    const timer = setInterval(() => fetchInfos(renderingKey.split(",")), 30000);
+    return () => clearInterval(timer);
+  }, [renderingKey, fetchInfos]);
 
   const handleDelete = async (liftId: string) => {
     if (!confirm("Are you sure? This deletes the folder from your Drive.")) return;
@@ -152,7 +214,19 @@ export default function Home() {
                     className="grid grid-cols-12 gap-8 items-center bg-surface swiss-border border-transparent hover:border-border-subtle p-6 transition-all group"
                   >
                     <div className="col-span-1 text-[13px] mono text-foreground-muted">0{i + 1}</div>
-                    <div className="col-span-11 md:col-span-5">
+                    <div className="col-span-11 md:col-span-4 flex items-center gap-4">
+                      {infos[lift.id]?.thumbnailLink && (
+                        // Drive thumbnails are short-lived URLs; hide the image if one fails to load.
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={infos[lift.id].thumbnailLink!}
+                          alt=""
+                          referrerPolicy="no-referrer"
+                          onError={(e) => { e.currentTarget.style.display = "none"; }}
+                          className="w-16 h-10 object-cover bg-background border border-border-subtle shrink-0"
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
                       {renamingId === lift.id ? (
                         <div className="flex items-center gap-4">
                           <input
@@ -172,11 +246,28 @@ export default function Home() {
                           </button>
                         </div>
                       )}
+                      </div>
                     </div>
-                    <div className="col-span-6 md:col-span-3 text-[13px] mono text-foreground-muted uppercase">
+                    <div className="col-span-6 md:col-span-2 text-[13px] mono uppercase">
+                      {infos[lift.id] ? (
+                        <>
+                          <div className={`font-bold ${STATUS_STYLE[infos[lift.id].status]}`}>
+                            {STATUS_LABEL[infos[lift.id].status]}
+                          </div>
+                          {infos[lift.id].frameCount > 0 && (
+                            <div className="text-[12px] text-foreground-muted">
+                              {infos[lift.id].frameCount} frames{infos[lift.id].hasVideo ? " + video" : ` / ${timeAgo(infos[lift.id].latestFrameTime)}`}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-foreground-muted">...</span>
+                      )}
+                    </div>
+                    <div className="col-span-6 md:col-span-2 text-[13px] mono text-foreground-muted uppercase">
                       {new Date(lift.createdTime).toLocaleDateString()} / {new Date(lift.createdTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </div>
-                    <div className="col-span-6 md:col-span-3 flex justify-end gap-6 items-center">
+                    <div className="col-span-12 md:col-span-3 flex justify-end gap-6 items-center">
                       <a
                         href={`https://drive.google.com/drive/folders/${lift.id}`}
                         target="_blank"
