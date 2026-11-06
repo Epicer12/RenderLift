@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { getDriveClient, findOrCreateFolder } from "@/lib/drive";
+import { getDriveClient, findOrCreateFolder, createUniqueFolder } from "@/lib/drive";
+import { liftNameFromFile } from "@/lib/liftName";
 import { authOptions } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
@@ -19,13 +20,12 @@ export async function POST(req: NextRequest) {
 
         const drive = getDriveClient(session.accessToken);
 
-        // 1. Ensure Folder Structure: RenderLift -> Lifts -> Lift_[Timestamp]
+        // 1. Ensure Folder Structure: RenderLift -> Lifts -> <file name>
         const rootId = await findOrCreateFolder(drive, "RenderLift");
         const liftsId = await findOrCreateFolder(drive, "Lifts", rootId);
 
-        // Create a specific folder for this lift
-        const liftName = `Lift_${Date.now()}`;
-        const liftFolderId = await findOrCreateFolder(drive, liftName, liftsId);
+        // Create a specific folder for this lift, named after the uploaded file
+        const { id: liftFolderId } = await createUniqueFolder(drive, liftNameFromFile(String(name)), liftsId);
 
         // 2. Initiate Resumable Upload Session
         // We use raw fetch here because we need the 'Location' header from the response
