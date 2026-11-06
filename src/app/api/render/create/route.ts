@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
             liftFolderId = parents[0];
         }
 
-        // 2. Get Lift Folder Name (e.g. "Lift_123456789")
+        // 2. Get Lift Folder Name (e.g. "My Scene")
         const liftFolderInfo = await drive.files.get({
             fileId: liftFolderId,
             fields: 'name'
