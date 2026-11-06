@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { getDriveClient, findOrCreateFolder, escapeQuery } from "@/lib/drive";
 import { drive_v3 } from "googleapis";
+import { computeLiftStatus } from "@/lib/liftStatus";
 
 export async function GET(
     req: NextRequest,
@@ -70,38 +71,43 @@ export async function GET(
             }
         }
 
-        let finalVideo = null;
-        let latestFrame = null;
+        let finalVideo: drive_v3.Schema$File | null = null;
+        let latestFrame: drive_v3.Schema$File | null = null;
+        let frameCount = 0;
 
         // 3. Get files from Renders folder if found
         if (rendersFolderId) {
             const files = await drive.files.list({
                 q: `'${rendersFolderId}' in parents and trashed = false`,
-                fields: "files(id, name, webViewLink, thumbnailLink, mimeType)",
-                orderBy: "createdTime desc",
+                fields: "files(id, name, webViewLink, thumbnailLink, mimeType, modifiedTime)",
+                orderBy: "modifiedTime desc",
+                pageSize: 1000,
             });
+            const all = files.data.files ?? [];
 
             // Find video
-            const video = files.data.files?.find(f => f.name?.toLowerCase().endsWith('.mp4'));
-            if (video) {
-                finalVideo = video;
-            }
+            finalVideo = all.find(f => f.name?.toLowerCase().endsWith('.mp4')) ?? null;
 
-            // Find latest image
-            const image = files.data.files?.find(f =>
+            // Frames are the images, newest first
+            const frames = all.filter(f =>
                 f.mimeType?.startsWith('image/') ||
                 f.name?.match(/\.(jpg|jpeg|png)$/i)
             );
-            if (image) {
-                latestFrame = image;
-            }
+            frameCount = frames.length;
+            latestFrame = frames[0] ?? null;
         }
+
+        const latestFrameTime = latestFrame?.modifiedTime ?? null;
+        const status = computeLiftStatus({ frameCount, hasVideo: !!finalVideo, latestFrameTime });
 
         return NextResponse.json({
             liftId: liftFolderId,
             name: liftFolder.name,
             finalVideo,
-            latestFrame
+            latestFrame,
+            frameCount,
+            latestFrameTime,
+            status,
         });
 
     } catch (error) {
