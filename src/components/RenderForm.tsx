@@ -8,6 +8,8 @@ interface RenderFormProps {
     fileName: string | null
     onStartRender: (settings: RenderSettings) => void
     disabled: boolean
+    // Start from these settings instead of the user's saved defaults (used when re-rendering a lift)
+    initialSettings?: RenderSettings
 }
 
 // SCENE keeps whatever engine the .blend file was saved with
@@ -24,8 +26,8 @@ export interface RenderSettings {
     samples?: number
 }
 
-export function RenderForm({ fileName, onStartRender, disabled }: RenderFormProps) {
-    const [settings, setSettings] = useState<RenderSettings>(getUserDefaults())
+export function RenderForm({ fileName, onStartRender, disabled, initialSettings }: RenderFormProps) {
+    const [settings, setSettings] = useState<RenderSettings>(() => ({ ...getUserDefaults(), ...initialSettings }))
 
     const isRangeInvalid = settings.startFrame > settings.endFrame;
 

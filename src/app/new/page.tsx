@@ -1,18 +1,48 @@
 "use client"
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Folder, Play, Info, Loader2, ChevronLeft } from "lucide-react";
 import { Upload } from "@/components/Upload";
 import { RenderForm, RenderSettings } from "@/components/RenderForm";
 import { useSession } from "next-auth/react";
 
+// useSearchParams needs a Suspense boundary for the page to build
 export default function NewLiftPage() {
+    return (
+        <Suspense fallback={null}>
+            <NewLiftContent />
+        </Suspense>
+    );
+}
+
+function NewLiftContent() {
     const { data: session } = useSession();
+    // /new?lift=<id> re-renders an existing lift: no upload, settings start from its last run
+    const liftParam = useSearchParams().get("lift");
     const [uploadedFile, setUploadedFile] = useState<{ id: string, name: string } | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [colabLink, setColabLink] = useState<string | null>(null);
     const [activeLiftId, setActiveLiftId] = useState<string | null>(null);
+    const [rerenderConfig, setRerenderConfig] = useState<{ fileName: string, settings: RenderSettings } | null>(null);
+    const [configError, setConfigError] = useState(false);
+
+    useEffect(() => {
+        if (!liftParam || !session) return;
+        let cancelled = false;
+        fetch(`/api/lifts/${encodeURIComponent(liftParam)}/config`)
+            .then(async (res) => {
+                if (!res.ok) throw new Error("No saved settings");
+                const d = await res.json();
+                if (!cancelled) setRerenderConfig({ fileName: d.fileName, settings: d.settings });
+            })
+            .catch(() => { if (!cancelled) setConfigError(true); });
+        return () => { cancelled = true; };
+    }, [liftParam, session]);
+
+    // The file being rendered: the one just uploaded, or the lift's original file when re-rendering
+    const formFileName = liftParam ? rerenderConfig?.fileName ?? null : uploadedFile?.name ?? null;
 
     if (!session) {
         return (
@@ -31,18 +61,18 @@ export default function NewLiftPage() {
     };
 
     const handleStartRender = async (settings: RenderSettings) => {
-        if (!uploadedFile) return;
+        if (!liftParam && !uploadedFile) return;
 
         setIsGenerating(true);
         try {
             const res = await fetch("/api/render/create", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    fileId: uploadedFile.id,
-                    fileName: uploadedFile.name,
-                    settings: settings
-                })
+                body: JSON.stringify(
+                    liftParam
+                        ? { liftId: liftParam, settings }
+                        : { fileId: uploadedFile!.id, fileName: uploadedFile!.name, settings }
+                )
             });
 
             const data = await res.json();
@@ -124,13 +154,27 @@ export default function NewLiftPage() {
                             </Link>
                             <div className="space-y-1">
                                 <div className="text-[13px] mono text-accent uppercase tracking-[0.2em] font-bold">New Lift Protocol</div>
-                                <h2 className="text-4xl md:text-5xl font-bold tracking-tight">Initialize Asset</h2>
+                                <h2 className="text-4xl md:text-5xl font-bold tracking-tight">{liftParam ? "Re-render" : "Initialize Asset"}</h2>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-12 gap-8 md:gap-16 animate-in slide-in-from-bottom-12 duration-700">
                             <div className="col-span-12 md:col-span-8">
-                                {!uploadedFile ? (
+                                {!formFileName && liftParam ? (
+                                    configError ? (
+                                        <div className="p-6 bg-surface border-l-2 border-red-500/60 space-y-3">
+                                            <p className="text-[13px] mono text-foreground-muted leading-relaxed uppercase tracking-widest">
+                                                This lift has no saved render settings, so it can&apos;t be re-rendered. Start a new render instead.
+                                            </p>
+                                            <Link href="/new" className="text-[13px] mono text-accent font-bold hover:underline uppercase tracking-widest">New render_</Link>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-4 mono text-[15px] text-accent animate-pulse">
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            Loading your last render settings...
+                                        </div>
+                                    )
+                                ) : !formFileName ? (
                                     <div className="space-y-12">
                                         <Upload onUploadComplete={handleUploadComplete} />
                                         <div className="flex items-start gap-4 p-6 bg-surface border-l-2 border-accent/20">
@@ -143,10 +187,16 @@ export default function NewLiftPage() {
                                 ) : (
                                     <div className="space-y-12">
                                         <RenderForm
-                                            fileName={uploadedFile.name}
+                                            fileName={formFileName}
                                             onStartRender={handleStartRender}
                                             disabled={isGenerating}
+                                            initialSettings={rerenderConfig?.settings}
                                         />
+                                        {liftParam && (
+                                            <p className="text-[13px] mono text-foreground-muted leading-relaxed uppercase tracking-widest">
+                                                Your current notebook in this lift is replaced. When you run it, the previous output moves to a Renders_&lt;date&gt; folder.
+                                            </p>
+                                        )}
                                         {isGenerating && (
                                             <div className="flex items-center gap-4 mono text-[15px] text-accent bg-accent/5 p-6 animate-pulse">
                                                 <Loader2 className="w-5 h-5 animate-spin" />

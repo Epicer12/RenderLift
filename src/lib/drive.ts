@@ -48,6 +48,47 @@ export async function listFolders(drive: drive_v3.Drive, parentId: string) {
     return response.data.files || [];
 }
 
+// Newest file with this name directly inside a folder, or null.
+export async function findFileInFolder(drive: drive_v3.Drive, folderId: string, name: string) {
+    const res = await drive.files.list({
+        q: `'${escapeQuery(folderId)}' in parents and name = '${escapeQuery(name)}' and trashed = false`,
+        fields: "files(id, name)",
+        orderBy: "modifiedTime desc",
+        pageSize: 1,
+    });
+    return res.data.files?.[0] ?? null;
+}
+
+// Replace the contents of the named file in a folder, or create it if it isn't there yet.
+export async function upsertFile(
+    drive: drive_v3.Drive,
+    folderId: string,
+    name: string,
+    mimeType: string,
+    body: string,
+    fields = "id, webViewLink"
+) {
+    const existing = await findFileInFolder(drive, folderId, name);
+    const media = { mimeType: "application/json", body };
+    if (existing?.id) {
+        return await drive.files.update({ fileId: existing.id, media, fields });
+    }
+    return await drive.files.create({
+        requestBody: { name, mimeType, parents: [folderId] },
+        media,
+        fields,
+    });
+}
+
+// The settings a lift was last generated with (render_config.json), or null.
+export async function readLiftConfig(drive: drive_v3.Drive, folderId: string) {
+    const file = await findFileInFolder(drive, folderId, "render_config.json");
+    if (!file?.id) return null;
+    const res = await drive.files.get({ fileId: file.id, alt: "media" }, { responseType: "text" });
+    const text = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
+    return JSON.parse(text) as { fileName?: string; fileId?: string; settings?: unknown };
+}
+
 export async function deleteFile(drive: drive_v3.Drive, fileId: string) {
     return await drive.files.delete({ fileId });
 }
