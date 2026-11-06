@@ -1,9 +1,13 @@
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getDriveClient } from "@/lib/drive";
+import { getDriveClient, readLiftConfig, upsertFile } from "@/lib/drive";
 import { generateNotebookJson } from "@/lib/notebook";
 
+// POST /api/render/create
+//   New lift:  { fileId, fileName, settings }  (the file was just uploaded into its lift folder)
+//   Re-render: { liftId, settings }            (source file and name come from the lift's render_config.json)
 export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
 
@@ -12,25 +16,44 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-        const { fileId, fileName, settings } = await req.json();
-
-        if (!fileId || !fileName || !settings) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-        }
+        const body = await req.json();
+        const { settings } = body;
+        const rerender = typeof body.liftId === "string" && body.liftId.length > 0;
 
         const drive = getDriveClient(session.accessToken);
 
-        // 1. Get the File's Parent Folder (The Job Folder created during upload)
-        const fileInfo = await drive.files.get({
-            fileId: fileId,
-            fields: 'parents'
-        });
+        let fileId: string | undefined = body.fileId;
+        let fileName: string | undefined = body.fileName;
+        let liftFolderId: string;
 
-        const parents = fileInfo.data.parents;
-        if (!parents || parents.length === 0) {
-            return NextResponse.json({ error: "File has no parent folder" }, { status: 400 });
+        if (rerender) {
+            if (!settings) {
+                return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+            }
+            liftFolderId = body.liftId;
+            const config = await readLiftConfig(drive, liftFolderId);
+            if (!config?.fileId || !config?.fileName) {
+                return NextResponse.json({ error: "This lift has no saved render settings to re-render from." }, { status: 404 });
+            }
+            fileId = config.fileId;
+            fileName = config.fileName;
+        } else {
+            if (!fileId || !fileName || !settings) {
+                return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+            }
+
+            // 1. Get the File's Parent Folder (The Job Folder created during upload)
+            const fileInfo = await drive.files.get({
+                fileId: fileId,
+                fields: 'parents'
+            });
+
+            const parents = fileInfo.data.parents;
+            if (!parents || parents.length === 0) {
+                return NextResponse.json({ error: "File has no parent folder" }, { status: 400 });
+            }
+            liftFolderId = parents[0];
         }
-        const liftFolderId = parents[0];
 
         // 2. Get Lift Folder Name (e.g. "Lift_123456789")
         const liftFolderInfo = await drive.files.get({
@@ -44,39 +67,34 @@ export async function POST(req: NextRequest) {
         const fullFolderPath = `RenderLift/Lifts/${liftFolderName}`;
 
         // 4. Generate Notebook Content with Caching Logic
-        const notebookJson = generateNotebookJson(fileName, fileId, fullFolderPath, settings);
-
-        // 5. Upload Notebook to the SAME Lift Folder
-        const notebookFile = await drive.files.create({
-            requestBody: {
-                name: "Render_Lift.ipynb",
-                mimeType: "application/vnd.google-colab",
-                parents: [liftFolderId],
-            },
-            media: {
-                mimeType: "application/json",
-                body: JSON.stringify(notebookJson, null, 2),
-            },
-            fields: "id, webViewLink",
+        const notebookJson = generateNotebookJson(fileName!, fileId!, fullFolderPath, settings, {
+            runId: randomUUID(),
+            archivePrevious: rerender,
         });
 
-        // 6. Save Lift Config for monitoring
-        await drive.files.create({
-            requestBody: {
-                name: "render_config.json",
-                mimeType: "application/json",
-                parents: [liftFolderId],
-            },
-            media: {
-                mimeType: "application/json",
-                body: JSON.stringify({
-                    fileName,
-                    fileId,
-                    settings,
-                    createdAt: new Date().toISOString(),
-                }),
-            },
-        });
+        // 5. Write the notebook into the SAME Lift Folder (a re-render replaces the existing one)
+        const notebookFile = await upsertFile(
+            drive,
+            liftFolderId,
+            "Render_Lift.ipynb",
+            "application/vnd.google-colab",
+            JSON.stringify(notebookJson, null, 2)
+        );
+
+        // 6. Save Lift Config for monitoring and for re-rendering later
+        await upsertFile(
+            drive,
+            liftFolderId,
+            "render_config.json",
+            "application/json",
+            JSON.stringify({
+                fileName,
+                fileId,
+                settings,
+                createdAt: new Date().toISOString(),
+            }),
+            "id"
+        );
 
         console.log("RENDER_CREATE_SUCCESS: Returning liftId", liftFolderId);
         return NextResponse.json({

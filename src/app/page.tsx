@@ -268,6 +268,12 @@ export default function Home() {
                       {new Date(lift.createdTime).toLocaleDateString()} / {new Date(lift.createdTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </div>
                     <div className="col-span-12 md:col-span-3 flex justify-end gap-6 items-center">
+                      <Link
+                        href={`/new?lift=${encodeURIComponent(lift.id)}`}
+                        className="text-[13px] font-black uppercase tracking-widest text-foreground-muted hover:text-accent transition-all"
+                      >
+                        Re-render
+                      </Link>
                       <a
                         href={`https://drive.google.com/drive/folders/${lift.id}`}
                         target="_blank"

@@ -17,8 +17,17 @@ export function generateNotebookJson(
     fileName: string, // e.g., "MyScene.blend" or "MyProject.zip"
     fileId: string, // ID of the uploaded file on Drive
     folderName: string, // e.g. "BlenderCloudRender/Job_123"
-    settings: RenderSettings
+    settings: RenderSettings,
+    options: {
+        // Identifies this generated notebook. A different id than the one stored in Renders/
+        // means the notebook is a new run, so the previous output may need archiving.
+        runId?: string,
+        // True for re-renders: move the previous Renders/ aside instead of mixing old and new frames.
+        archivePrevious?: boolean,
+    } = {}
 ) {
+    const runId = /^[A-Za-z0-9-]{1,64}$/.test(options.runId ?? '') ? options.runId! : 'initial';
+    const archivePrevious = options.archivePrevious === true;
     // Settings arrive from the browser and end up as code, so only accept known values
     const engine = pick(settings.engine, ['SCENE', 'CYCLES', 'EEVEE'] as const, 'SCENE');
     const format = pick(settings.format, ['PNG', 'JPEG', 'OPEN_EXR'] as const, 'PNG');
@@ -192,7 +201,21 @@ export function generateNotebookJson(
                 `blender_dir = ${py(blenderDir)}\n`,
                 `\n`,
                 `output_dir = os.path.join(LIFT_DIR, 'Renders')\n`,
+                `\n`,
+                `# Re-renders move the previous output to Renders_<time> once, so old and new frames don't mix.\n`,
+                `# Running this cell again in the same notebook (e.g. after a disconnect) keeps the frames.\n`,
+                `RUN_ID = ${py(runId)}\n`,
+                `ARCHIVE_PREVIOUS = ${archivePrevious ? 'True' : 'False'}\n`,
+                `run_marker = os.path.join(output_dir, '.renderlift_run')\n`,
+                `previous_run = open(run_marker).read().strip() if os.path.exists(run_marker) else None\n`,
+                `if ARCHIVE_PREVIOUS and previous_run != RUN_ID and os.path.isdir(output_dir) and os.listdir(output_dir):\n`,
+                `    import shutil, time\n`,
+                `    archive_dir = f'{output_dir}_' + time.strftime('%Y%m%d_%H%M%S')\n`,
+                `    shutil.move(output_dir, archive_dir)\n`,
+                `    print(f'Previous output moved to {os.path.basename(archive_dir)}')\n`,
                 `os.makedirs(output_dir, exist_ok=True)\n`,
+                `with open(run_marker, 'w') as f:\n`,
+                `    f.write(RUN_ID)\n`,
                 `\n`,
                 `cmd = [\n`,
                 `    f'./{blender_dir}/blender', '-b', blend_path, '-noaudio',\n`,
