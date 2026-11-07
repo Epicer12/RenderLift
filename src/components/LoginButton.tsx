@@ -1,5 +1,6 @@
 "use client"
 import { signIn, signOut, useSession } from "next-auth/react"
+import { markSignInPending } from "@/lib/analytics"
 
 export function LoginButton() {
     const { data: session } = useSession()
@@ -18,7 +19,7 @@ export function LoginButton() {
     }
     return (
         <button
-            onClick={() => signIn("google")}
+            onClick={() => { markSignInPending(); signIn("google") }}
             className="px-6 py-2 text-[10px] md:text-xs font-bold uppercase tracking-widest bg-accent text-white hover:bg-blue-600 transition-colors w-full md:w-auto"
         >
             Login with Google

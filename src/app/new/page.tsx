@@ -7,6 +7,7 @@ import { Folder, Play, Info, Loader2, ChevronLeft } from "lucide-react";
 import { Upload } from "@/components/Upload";
 import { RenderForm, RenderSettings } from "@/components/RenderForm";
 import { useSession } from "next-auth/react";
+import { trackNotebookGenerated, trackNotebookOpened } from "@/lib/analytics";
 
 // useSearchParams needs a Suspense boundary for the page to build
 export default function NewLiftPage() {
@@ -78,6 +79,7 @@ function NewLiftContent() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Failed to create lift");
 
+            trackNotebookGenerated({ rerender: !!liftParam, engine: settings.engine, device: settings.device });
             setColabLink(data.notebookUrl);
             setActiveLiftId(data.liftId);
         } catch (error) {
@@ -119,6 +121,7 @@ function NewLiftContent() {
                                     href={colabLink}
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    onClick={trackNotebookOpened}
                                     className="px-10 py-5 bg-accent text-white font-bold uppercase tracking-widest text-sm hover:bg-blue-600 transition-all active:scale-95 shadow-[0_0_30px_rgba(79,140,255,0.2)] flex items-center justify-center md:justify-start gap-4 text-center"
                                 >
                                     <Play className="w-5 h-5 fill-current" />

@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
+import { ConsentBanner } from "@/components/ConsentBanner";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
@@ -39,9 +40,21 @@ export default async function RootLayout({
                 __html: `
                   window.dataLayer = window.dataLayer || [];
                   function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
+                  // Consent Mode: no analytics cookies until the visitor accepts
+                  gtag('consent', 'default', {
+                    analytics_storage: 'denied',
+                    ad_storage: 'denied',
+                    ad_user_data: 'denied',
+                    ad_personalization: 'denied'
+                  });
+                  try {
+                    if (localStorage.getItem('renderlift_analytics_consent') === 'granted') {
+                      gtag('consent', 'update', { analytics_storage: 'granted' });
+                    }
+                  } catch (e) {}
 
-                  gtag('config', '${gaId}');
+                  gtag('js', new Date());
+                  gtag('config', '${gaId}', { allow_google_signals: false, allow_ad_personalization_signals: false });
                 `,
               }}
             />
@@ -53,6 +66,7 @@ export default async function RootLayout({
           <Navbar />
           {children}
           <Footer />
+          {gaId && <ConsentBanner />}
         </Providers>
       </body>
     </html>
