@@ -47,10 +47,10 @@ function NewLiftContent() {
     if (!session) {
         return (
             <div className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-6">
-                <div className="text-accent mono text-[15px] uppercase tracking-widest font-bold">Access Denied</div>
-                <h1 className="text-3xl font-bold tracking-tight">Authentication Required_</h1>
+                <div className="text-accent mono text-[15px] uppercase tracking-widest font-bold">Sign in required</div>
+                <h1 className="text-3xl font-bold tracking-tight">Sign in with Google to continue</h1>
                 <Link href="/" className="px-8 py-4 bg-accent text-white font-bold uppercase tracking-widest text-xs active:scale-95 transition-all">
-                    Return to Entry
+                    Back to home
                 </Link>
             </div>
         );
@@ -97,14 +97,13 @@ function NewLiftContent() {
                     <div className="grid grid-cols-12 gap-8 animate-in slide-in-from-bottom-8 duration-500">
                         <div className="col-span-12 md:col-span-7 space-y-12">
                             <div className="space-y-4">
-                                <div className="text-[13px] mono text-accent uppercase tracking-[0.2em] font-bold">Operation Successful</div>
+                                <div className="text-[13px] mono text-accent uppercase tracking-[0.2em] font-bold">Notebook ready</div>
                                 <h2 className="text-4xl md:text-5xl font-bold tracking-tight">Render_Lift.ipynb</h2>
                             </div>
                             <div className="space-y-6 border-l-2 border-border-subtle pl-8">
                                 {[
-                                    { label: "Storage", status: "Connected", detail: "Google Drive/Lifts" },
-                                    { label: "Hardware", status: "Pending", detail: "Colab T4/A100" },
-                                    { label: "Instance", status: "Ready", detail: activeLiftId.slice(0, 12) + "..." }
+                                    { label: "Saved to", status: "Google Drive", detail: "RenderLift/Lifts" },
+                                    { label: "Next step", status: "Open the notebook in Colab", detail: "Run all cells" }
                                 ].map((item, i) => (
                                     <div key={i} className="flex justify-between items-end border-b border-border-subtle/50 pb-2">
                                         <div className="space-y-1">
@@ -153,8 +152,8 @@ function NewLiftContent() {
                                 <ChevronLeft className="w-4 h-4 text-foreground-muted group-hover:text-foreground" />
                             </Link>
                             <div className="space-y-1">
-                                <div className="text-[13px] mono text-accent uppercase tracking-[0.2em] font-bold">New Lift Protocol</div>
-                                <h2 className="text-4xl md:text-5xl font-bold tracking-tight">{liftParam ? "Re-render" : "Initialize Asset"}</h2>
+                                <div className="text-[13px] mono text-accent uppercase tracking-[0.2em] font-bold">{liftParam ? "Existing render" : "New render"}</div>
+                                <h2 className="text-4xl md:text-5xl font-bold tracking-tight">{liftParam ? "Re-render" : "Upload your file"}</h2>
                             </div>
                         </div>
 
@@ -166,7 +165,7 @@ function NewLiftContent() {
                                             <p className="text-[13px] mono text-foreground-muted leading-relaxed uppercase tracking-widest">
                                                 This lift has no saved render settings, so it can&apos;t be re-rendered. Start a new render instead.
                                             </p>
-                                            <Link href="/new" className="text-[13px] mono text-accent font-bold hover:underline uppercase tracking-widest">New render_</Link>
+                                            <Link href="/new" className="text-[13px] mono text-accent font-bold hover:underline uppercase tracking-widest">New render</Link>
                                         </div>
                                     ) : (
                                         <div className="flex items-center gap-4 mono text-[15px] text-accent animate-pulse">
@@ -200,7 +199,7 @@ function NewLiftContent() {
                                         {isGenerating && (
                                             <div className="flex items-center gap-4 mono text-[15px] text-accent bg-accent/5 p-6 animate-pulse">
                                                 <Loader2 className="w-5 h-5 animate-spin" />
-                                                Finalizing render configuration and distributing notebooks to Drive system...
+                                                Creating your notebook in Google Drive...
                                             </div>
                                         )}
                                     </div>
@@ -210,19 +209,16 @@ function NewLiftContent() {
                             <div className="col-span-12 md:col-span-4 self-start sticky top-24">
                                 <div className="bg-surface swiss-border p-8 space-y-8">
                                     <div className="space-y-2">
-                                        <label className="text-[13px] mono text-foreground-muted uppercase tracking-widest">Target Environment</label>
-                                        <div className="text-base font-bold uppercase">Google_Colab / Ubuntu_22.04</div>
+                                        <label className="text-[13px] mono text-foreground-muted uppercase tracking-widest">Runs on</label>
+                                        <div className="text-base font-bold uppercase">Google Colab</div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[13px] mono text-foreground-muted uppercase tracking-widest">Rendering Nodes</label>
-                                        <div className="text-base font-bold flex items-center gap-2">
-                                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                                            Active_Pool (T4, V100, A100)
-                                        </div>
+                                        <label className="text-[13px] mono text-foreground-muted uppercase tracking-widest">GPU</label>
+                                        <div className="text-base font-bold">Free Colab GPU, assigned by Google</div>
                                     </div>
                                     <div className="pt-8 border-t border-border-subtle">
                                         <div className="text-[12px] mono text-foreground-muted uppercase leading-relaxed">
-                                            Instructions: Upload your file, configure properties, and click &quot;Generate&quot;. We&apos;ll provide a direct link to run the render on NVIDIA hardware.
+                                            How it works: upload your file, choose your settings, and click &quot;Generate&quot;. You get a link to open the notebook in Google Colab and run the render there.
                                         </div>
                                     </div>
                                 </div>

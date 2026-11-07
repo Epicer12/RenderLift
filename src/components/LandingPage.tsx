@@ -27,7 +27,7 @@ export function LandingPage() {
                                 className="px-10 py-5 bg-accent text-white font-bold uppercase tracking-widest text-sm hover:bg-blue-600 transition-all active:scale-95 flex items-center gap-3"
                             >
                                 <Activity className="w-4 h-4" />
-                                Initialize Operations_
+                                Sign in with Google
                             </button>
                         </div>
                     </div>
