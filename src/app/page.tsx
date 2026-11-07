@@ -65,7 +65,8 @@ export default function Home() {
   }, [fetchSummaries]);
 
   useEffect(() => {
-    if (session) {
+    // Without Drive access every Drive call fails; the banner explains it instead of an empty list
+    if (session && session.error !== "MissingDriveScope") {
       fetchLifts();
     }
   }, [session, fetchLifts]);
@@ -103,6 +104,10 @@ export default function Home() {
 
   if (!session) {
     return <LandingPage />;
+  }
+
+  if (session.error === "MissingDriveScope") {
+    return <main className="min-h-screen" />;
   }
 
   return (
