@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { getDriveClient, readLiftConfig } from "@/lib/drive";
+import { summarizeSettings } from "@/lib/liftSummary";
+import type { RenderSettings } from "@/components/RenderForm";
 
 // GET /api/lifts/[liftId]/config - the file name and render settings a lift was last generated with
 export async function GET(
@@ -25,6 +27,8 @@ export async function GET(
             fileName: config.fileName,
             fileId: config.fileId,
             settings: config.settings,
+            summary: summarizeSettings(config.settings as Partial<RenderSettings>),
+            createdAt: config.createdAt ?? null,
         });
     } catch (error) {
         console.error("LiftConfigError:", (error as Error).message);
