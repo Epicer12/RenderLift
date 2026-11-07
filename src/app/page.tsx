@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Trash2, Edit2, Loader2, Activity, Plus } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { LandingPage } from "@/components/LandingPage";
+import { WhatsNew } from "@/components/WhatsNew";
 import type { LiftInfo, LiftStatus } from "@/lib/liftStatus";
 
 interface Lift {
@@ -41,6 +42,8 @@ export default function Home() {
   // Dashboard Stats & List
   const [lifts, setLifts] = useState<Lift[]>([]);
   const [loadingLifts, setLoadingLifts] = useState(false);
+  // True once the lift list has loaded successfully (a failed load must not look like "no lifts")
+  const [liftsLoaded, setLiftsLoaded] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   // Per-lift render status, filled in after the list loads. Missing = still loading or unavailable.
@@ -80,6 +83,7 @@ export default function Home() {
       const data = await res.json();
       if (data.lifts) {
         setLifts(data.lifts);
+        setLiftsLoaded(true);
         fetchInfos(data.lifts.map((l: Lift) => l.id));
       }
     } catch (error) {
@@ -155,6 +159,8 @@ export default function Home() {
     <main className="min-h-screen">
       <div className="max-w-[1440px] mx-auto px-8 md:px-16 py-12">
         <div className="space-y-24">
+
+          <WhatsNew ready={liftsLoaded} hasLifts={lifts.length > 0} />
 
           {/* Row 1: Summary */}
           <div className="grid grid-cols-12 gap-8">
