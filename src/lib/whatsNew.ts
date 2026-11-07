@@ -13,7 +13,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
         date: "November 7, 2026",
         items: [
             "Zip projects with a single .blend file at the top now render without any extra setup.",
-            "Your dashboard shows a status for each render (not started, rendering, done).",
+            "Your dashboard shows the settings each render uses and when its notebook was last updated.",
             "Re-render any earlier render with new settings, without uploading again.",
             "If Colab disconnects, run the notebook again: frames that are already finished are skipped.",
             "New renders are named after your file instead of a number.",

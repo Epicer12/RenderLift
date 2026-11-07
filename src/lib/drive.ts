@@ -113,7 +113,7 @@ export async function readLiftConfig(drive: drive_v3.Drive, folderId: string) {
     if (!file?.id) return null;
     const res = await drive.files.get({ fileId: file.id, alt: "media" }, { responseType: "text" });
     const text = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
-    return JSON.parse(text) as { fileName?: string; fileId?: string; settings?: unknown };
+    return JSON.parse(text) as { fileName?: string; fileId?: string; settings?: unknown; createdAt?: string };
 }
 
 export async function deleteFile(drive: drive_v3.Drive, fileId: string) {
