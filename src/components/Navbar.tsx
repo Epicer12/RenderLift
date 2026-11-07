@@ -19,7 +19,7 @@ export function Navbar() {
 
     const navLinks = [
         { name: "Lifts", href: "/", icon: LayoutDashboard },
-        { name: "New Operation", href: "/new", icon: Plus },
+        { name: "New render", href: "/new", icon: Plus },
     ];
 
     return (

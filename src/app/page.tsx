@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Trash2, Edit2, Loader2, Zap, Activity, Plus } from "lucide-react";
+import { Trash2, Edit2, Loader2, Activity, Plus } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { LandingPage } from "@/components/LandingPage";
 import type { LiftInfo, LiftStatus } from "@/lib/liftStatus";
@@ -133,9 +133,19 @@ export default function Home() {
     }
   };
 
-  // Compute "Energy" Estimate
   const totalLifts = (lifts && lifts.length) || 0;
-  const estimatedEnergy = Math.min(100, (totalLifts * 12.5));
+
+  // Real counts from each lift's render status; "..." until every lift has been checked
+  const statusCounts: Record<LiftStatus, number> = { rendering: 0, done: 0, not_started: 0 };
+  let checkedLifts = 0;
+  for (const lift of lifts) {
+    const info = infos[lift.id];
+    if (info) {
+      statusCounts[info.status]++;
+      checkedLifts++;
+    }
+  }
+  const statusReady = totalLifts > 0 && checkedLifts === totalLifts;
 
   if (!session) {
     return <LandingPage />;
@@ -146,45 +156,43 @@ export default function Home() {
       <div className="max-w-[1440px] mx-auto px-8 md:px-16 py-12">
         <div className="space-y-24">
 
-          {/* Row 1: Operations Data */}
+          {/* Row 1: Summary */}
           <div className="grid grid-cols-12 gap-8">
             <div className="col-span-12 md:col-span-4 bg-surface swiss-border p-8 space-y-6">
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
-                  <div className="text-[13px] mono text-foreground-muted uppercase tracking-widest">Compute Load</div>
-                  <div className="text-3xl font-black">{estimatedEnergy}%</div>
-                </div>
-                <Zap className="text-accent w-6 h-6" />
-              </div>
-              <div className="w-full bg-background h-1">
-                <div className="bg-accent h-full transition-all duration-1000" style={{ width: `${estimatedEnergy}%` }} />
-              </div>
-              <div className="text-[12px] mono text-foreground-muted uppercase tracking-wider leading-relaxed">
-                Estimate based on session activity. Refreshes every 24h.
-              </div>
-            </div>
-
-            <div className="col-span-12 md:col-span-4 bg-surface swiss-border p-8 space-y-6">
-              <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <div className="text-[13px] mono text-foreground-muted uppercase tracking-widest">Active Lifts</div>
+                  <div className="text-[13px] mono text-foreground-muted uppercase tracking-widest">Renders</div>
                   <div className="text-3xl font-black">{totalLifts}</div>
                 </div>
                 <Activity className="text-foreground-muted w-6 h-6" />
               </div>
               <div className="text-[12px] mono text-foreground-muted uppercase tracking-wider leading-relaxed">
-                Total render instances registered in your Google Drive storage.
+                Saved in your Google Drive under RenderLift/Lifts.
               </div>
             </div>
 
+            <div className="col-span-12 md:col-span-4 bg-surface swiss-border p-8 space-y-4">
+              <div className="text-[13px] mono text-foreground-muted uppercase tracking-widest">Status</div>
+              {([
+                ["Rendering", "rendering"],
+                ["Done", "done"],
+                ["Not started", "not_started"],
+              ] as const).map(([label, key]) => (
+                <div key={key} className="flex justify-between items-baseline text-[13px] mono uppercase tracking-widest">
+                  <span className="text-foreground-muted">{label}</span>
+                  <span className="text-xl font-black text-foreground">{statusReady ? statusCounts[key] : totalLifts === 0 ? 0 : "..."}</span>
+                </div>
+              ))}
+            </div>
+
             <div className="col-span-12 md:col-span-4 bg-surface border border-accent/20 p-8 flex flex-col justify-between group hover:border-accent transition-colors">
-              <div className="text-base font-bold leading-tight">Start a new secure render pipeline using remote cloud nodes.</div>
+              <div className="text-base font-bold leading-tight">Upload a Blender file and get a notebook that renders it on a free Google Colab GPU.</div>
               <Link
                 href="/new"
                 className="mt-6 flex items-center gap-3 text-[15px] font-black uppercase tracking-widest text-accent group-hover:gap-5 transition-all"
               >
                 <Plus className="w-4 h-4" />
-                New Operation_
+                New render
               </Link>
             </div>
           </div>
@@ -192,19 +200,18 @@ export default function Home() {
           {/* Row 2: Recent History */}
           <div className="space-y-8 pb-24">
             <div className="flex justify-between items-end border-b border-border-subtle pb-4">
-              <h2 className="text-[15px] font-black uppercase tracking-[0.2em] text-foreground-muted">Recent Render History</h2>
-              <div className="text-[13px] mono text-foreground-muted uppercase">Sync Status: Online</div>
+              <h2 className="text-[15px] font-black uppercase tracking-[0.2em] text-foreground-muted">Your renders</h2>
             </div>
 
             {loadingLifts ? (
               <div className="py-24 flex items-center gap-4 text-accent animate-pulse">
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span className="text-[15px] font-bold uppercase tracking-widest">Polling Google Drive Data...</span>
+                <span className="text-[15px] font-bold uppercase tracking-widest">Loading your renders...</span>
               </div>
             ) : (!lifts || lifts.length === 0) ? (
               <div className="py-32 border border-border-subtle border-dashed flex flex-col items-center justify-center text-center space-y-6">
-                <div className="text-[13px] mono text-foreground-muted uppercase">Storage Empty</div>
-                <p className="text-base max-w-xs text-foreground-muted leading-relaxed">No render lifts found. Click &quot;New Operation&quot; to begin.</p>
+                <div className="text-[13px] mono text-foreground-muted uppercase">No renders yet</div>
+                <p className="text-base max-w-xs text-foreground-muted leading-relaxed">Click &quot;New render&quot; to upload your first Blender file.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-1">

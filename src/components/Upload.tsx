@@ -189,14 +189,14 @@ export function Upload({ onUploadComplete }: UploadProps) {
             <UploadCloud className={clsx("w-5 h-5", isDragActive ? "text-accent" : "text-foreground-muted")} />
           )}
           <span className="text-[13px] mono text-foreground-muted uppercase tracking-[0.2em]">
-            {uploading ? "Operation in progress" : status === 'success' ? "Operation successful" : "Source selection"}
+            {uploading ? "Uploading" : status === 'success' ? "Upload complete" : "Choose a file"}
           </span>
         </div>
 
         <div className="space-y-2">
           {uploading ? (
             <div className="space-y-4 w-full min-w-[300px]">
-              <p className="text-xl font-bold uppercase tracking-tight">Uploading Assets...</p>
+              <p className="text-xl font-bold uppercase tracking-tight">Uploading your file...</p>
               <div className="w-full h-[2px] bg-border-subtle relative overflow-hidden">
                 <div
                   className="absolute h-full bg-accent transition-all duration-300"
@@ -211,7 +211,7 @@ export function Upload({ onUploadComplete }: UploadProps) {
           ) : (
             <>
               <p className="text-2xl font-bold tracking-tight">
-                {isDragActive ? "Release to initialize" : "Select or drop .blend or .zip file"}
+                {isDragActive ? "Release to upload" : "Select or drop .blend or .zip file"}
               </p>
               <p className="text-[15px] mono text-foreground-muted uppercase tracking-widest">
                 Max file size: 2GB • Format: .blend, or .zip with textures
