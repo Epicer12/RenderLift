@@ -35,6 +35,8 @@ export function generateNotebookJson(
     const startFrame = toInt(settings.startFrame, 1);
     const endFrame = Math.max(startFrame, toInt(settings.endFrame, startFrame));
     const samples = toInt(settings.samples, 0);
+    // "Scene default" may turn out to be EEVEE, so only an explicit Cycles choice skips the virtual display
+    const needsDisplay = engine !== 'CYCLES';
 
     const blenderUrl = blenderDownloadUrl(settings.version);
     const blenderArchive = blenderUrl.split('/').pop()!; // "blender-4.2.23-linux-x64.tar.xz"
@@ -244,6 +246,14 @@ export function generateNotebookJson(
                 `    '-s', str(start_frame), '-e', str(end_frame), '-a',\n`,
                 `    '--', '--cycles-device', device,\n`,
                 `]\n`,
+                `\n`,
+                `# EEVEE needs an OpenGL display, which a Colab machine doesn't have. A virtual display (xvfb)\n`,
+                `# gives it one (software OpenGL, so it is slower than Cycles). Cycles doesn't need it.\n`,
+                `USE_VIRTUAL_DISPLAY = ${needsDisplay ? 'True' : 'False'}\n`,
+                `if USE_VIRTUAL_DISPLAY:\n`,
+                `    !which xvfb-run > /dev/null || (apt-get -qq update && apt-get -qq install -y xvfb > /dev/null)\n`,
+                `    cmd = ['xvfb-run', '-a', '-s', '-screen 0 1280x720x24'] + cmd\n`,
+                `\n`,
                 `cmd_line = shlex.join(cmd)\n`,
                 `print(f'Executing: {cmd_line}')\n`,
                 `!{cmd_line}`

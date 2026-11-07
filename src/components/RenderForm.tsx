@@ -87,6 +87,12 @@ export function RenderForm({ fileName, onStartRender, disabled, initialSettings 
                                 <option value="CYCLES">Cycles</option>
                                 <option value="EEVEE">EEVEE</option>
                             </select>
+                            {(settings.engine ?? 'SCENE') !== 'CYCLES' && (
+                                <p className="mt-3 text-[12px] mono text-foreground-muted uppercase tracking-wider leading-relaxed">
+                                    Scenes that use EEVEE render on a virtual display in Colab, which can be much slower than Cycles
+                                    (one test frame took about 6 minutes).
+                                </p>
+                            )}
                         </div>
                     </div>
                 </div>
