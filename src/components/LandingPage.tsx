@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react";
 import { Activity } from "lucide-react";
 import { Logo } from "./Logo";
+import { markSignInPending } from "@/lib/analytics";
 
 export function LandingPage() {
     return (
@@ -23,7 +24,7 @@ export function LandingPage() {
                         </h1>
                         <div className="flex flex-col items-start gap-4">
                             <button
-                                onClick={() => signIn("google")}
+                                onClick={() => { markSignInPending(); signIn("google") }}
                                 className="px-10 py-5 bg-accent text-white font-bold uppercase tracking-widest text-sm hover:bg-blue-600 transition-all active:scale-95 flex items-center gap-3"
                             >
                                 <Activity className="w-4 h-4" />

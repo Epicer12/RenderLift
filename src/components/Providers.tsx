@@ -2,6 +2,7 @@
 import { useEffect } from "react"
 import { Session } from "next-auth"
 import { SessionProvider, signIn, signOut, useSession } from "next-auth/react"
+import { trackSignInIfPending } from "@/lib/analytics"
 
 const RECONSENT_KEY = "renderlift_reconsent_at"
 const RECONSENT_COOLDOWN_MS = 5 * 60 * 1000
@@ -39,10 +40,23 @@ function SessionGuard() {
     return null
 }
 
+// Reports sign_in once after a user-initiated sign-in (not the silent re-consent redirect)
+function SignInTracker() {
+    const { data: session } = useSession()
+    const signedIn = !!session && !session.error
+
+    useEffect(() => {
+        if (signedIn) trackSignInIfPending()
+    }, [signedIn])
+
+    return null
+}
+
 export function Providers({ children, session }: { children: React.ReactNode, session: Session | null }) {
     return (
         <SessionProvider session={session}>
             <SessionGuard />
+            <SignInTracker />
             {children}
         </SessionProvider>
     )

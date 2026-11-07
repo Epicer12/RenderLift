@@ -4,6 +4,7 @@ import { useDropzone } from 'react-dropzone'
 import { UploadCloud, CheckCircle, Loader2, AlertCircle } from 'lucide-react'
 import clsx from 'clsx'
 import { useSession } from 'next-auth/react'
+import { trackUploadComplete } from '@/lib/analytics'
 
 interface UploadProps {
   onUploadComplete?: (file: { id: string, name: string }) => void
@@ -134,6 +135,7 @@ export function Upload({ onUploadComplete }: UploadProps) {
 
       setStatus('success')
       setMessage('Upload complete!')
+      trackUploadComplete(file)
 
       if (onUploadComplete) {
         // The Drive API Resumable Upload response structure
