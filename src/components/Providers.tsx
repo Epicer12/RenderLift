@@ -14,7 +14,8 @@ function SessionGuard() {
     const error = session?.error
 
     useEffect(() => {
-        if (!error) return
+        // Missing Drive access is handled by DriveAccessBanner (the user has to grant it)
+        if (!error || error === "MissingDriveScope") return
 
         let lastAttempt = 0
         try {

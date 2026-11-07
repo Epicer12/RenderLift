@@ -96,6 +96,12 @@ export function Upload({ onUploadComplete }: UploadProps) {
       return
     }
 
+    if (session.error === 'MissingDriveScope') {
+      setStatus('error')
+      setMessage('RenderLift does not have access to your Google Drive yet. Use "Grant access" at the top of the page.')
+      return
+    }
+
     const file = acceptedFiles[0]
     if (!file) return
     if (file.size === 0) {

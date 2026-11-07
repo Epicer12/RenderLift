@@ -5,6 +5,7 @@ import { Providers } from "@/components/Providers";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { ConsentBanner } from "@/components/ConsentBanner";
+import { DriveAccessBanner } from "@/components/DriveAccessBanner";
 import { SITE_URL, SITE_NAME, SITE_TITLE, SITE_DESCRIPTION } from "@/lib/site";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -82,6 +83,7 @@ export default async function RootLayout({
       <body className={`${inter.className} bg-background text-foreground antialiased`}>
         <Providers session={session}>
           <Navbar />
+          <DriveAccessBanner />
           {children}
           <Footer />
           {gaId && <ConsentBanner />}

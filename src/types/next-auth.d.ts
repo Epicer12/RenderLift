@@ -1,7 +1,7 @@
 import { User } from "next-auth";
 import "next-auth/jwt";
 
-type AuthError = "MissingRefreshToken" | "RefreshAccessTokenError";
+type AuthError = "MissingRefreshToken" | "RefreshAccessTokenError" | "MissingDriveScope";
 
 declare module "next-auth" {
     interface Session {

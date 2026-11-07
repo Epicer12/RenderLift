@@ -2,6 +2,13 @@ import GoogleProvider from "next-auth/providers/google";
 import { AuthOptions, TokenSet } from "next-auth";
 import { JWT } from "next-auth/jwt";
 
+const DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+
+// Google reports the scopes it actually granted (a user can untick Drive on the consent screen,
+// or remove it later in their Google Account). undefined means "not reported": assume it's fine.
+const lacksDriveScope = (scope: unknown) =>
+    typeof scope === "string" && !scope.split(" ").includes(DRIVE_FILE_SCOPE);
+
 // Helper function to refresh the access token
 async function refreshAccessToken(token: JWT): Promise<JWT> {
     try {
@@ -36,7 +43,7 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
             accessToken: refreshedTokens.access_token,
             accessTokenExpires: Date.now() + (refreshedTokens.expires_in as number) * 1000,
             refreshToken: refreshedTokens.refresh_token ?? token.refreshToken, // Fallback to old refresh token
-            error: undefined,
+            error: lacksDriveScope(refreshedTokens.scope) ? "MissingDriveScope" : undefined,
         };
     } catch (error) {
         console.error("RefreshAccessTokenError", error);
@@ -74,7 +81,11 @@ export const authOptions: AuthOptions = {
                     accessTokenExpires: Date.now() + (typeof account.expires_in === "number" ? account.expires_in : 3600) * 1000,
                     refreshToken: account.refresh_token,
                     user,
-                    error: account.refresh_token ? undefined : "MissingRefreshToken",
+                    // Missing Drive access is reported first: the user has to grant it themselves
+                    // (banner), whereas a missing refresh token is fixed by an automatic re-consent.
+                    error: lacksDriveScope(account.scope)
+                        ? "MissingDriveScope"
+                        : account.refresh_token ? undefined : "MissingRefreshToken",
                 };
             }
 
