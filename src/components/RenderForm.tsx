@@ -128,7 +128,7 @@ export function RenderForm({ fileName, onStartRender, disabled, initialSettings 
                         </div>
                         {isRangeInvalid && (
                             <div className="col-span-12 text-[13px] mono text-red-500 uppercase tracking-widest mt-2">
-                                Critical Error: Start frame &gt; End frame
+                                Start frame must not be after the end frame
                             </div>
                         )}
                         {settings.endFrame > settings.startFrame && (
@@ -142,7 +142,7 @@ export function RenderForm({ fileName, onStartRender, disabled, initialSettings 
                                     className="w-4 h-4 border-2 border-border-subtle bg-surface accent-accent rounded-none cursor-pointer"
                                 />
                                 <label htmlFor="gen-video" className="text-[13px] uppercase font-bold tracking-widest cursor-pointer opacity-80">
-                                    Include Video_Merge Node
+                                    Also make an MP4 video from the frames
                                 </label>
                             </div>
                         )}
