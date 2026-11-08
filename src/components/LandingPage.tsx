@@ -16,7 +16,7 @@ export function LandingPage() {
                             <div>
                                 <span className="text-orange-500">Render</span>
                                 <span className="text-blue-500">Lift</span>
-                                <span className="text-accent ml-2">/</span> 1.0
+                                <span className="text-accent ml-2">/</span> 1.1
                             </div>
                         </div>
                         <h1 className="text-5xl md:text-7xl font-bold leading-[1.1] tracking-tight max-w-3xl">

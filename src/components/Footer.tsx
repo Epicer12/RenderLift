@@ -9,7 +9,7 @@ export function Footer() {
                 <div className="flex items-center gap-4 group text-[13px] md:text-[17px]">
                     <Logo className="w-8 h-8 grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all" />
                     <div>
-                        &copy; {new Date().getFullYear()} <span className="font-bold"><span className="text-blue-500">Render</span><span className="text-orange-500">Lift</span></span> <span className="text-accent">/</span> Build_1.0
+                        &copy; {new Date().getFullYear()} <span className="font-bold"><span className="text-blue-500">Render</span><span className="text-orange-500">Lift</span></span> <span className="text-accent">/</span> Build_1.1
                     </div>
                 </div>
 
