@@ -1,10 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Trash2, Edit2, Loader2, Zap, Activity, Plus } from "lucide-react";
+import { Trash2, Edit2, Loader2, Activity, Plus } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { LandingPage } from "@/components/LandingPage";
+import { WhatsNew } from "@/components/WhatsNew";
+import { timeAgo, type LiftSummary } from "@/lib/liftSummary";
 
 interface Lift {
   id: string;
@@ -18,29 +20,56 @@ export default function Home() {
   // Dashboard Stats & List
   const [lifts, setLifts] = useState<Lift[]>([]);
   const [loadingLifts, setLoadingLifts] = useState(false);
+  // True once the lift list has loaded successfully (a failed load must not look like "no lifts")
+  const [liftsLoaded, setLiftsLoaded] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
+  // Per-lift settings summary, filled in after the list loads. Missing = still loading or unavailable.
+  const [summaries, setSummaries] = useState<Record<string, LiftSummary>>({});
 
-  useEffect(() => {
-    if (session) {
-      fetchLifts();
+  const fetchSummary = useCallback(async (liftId: string) => {
+    try {
+      const res = await fetch(`/api/lifts/${liftId}/config`);
+      if (!res.ok) return;
+      const d = await res.json();
+      setSummaries(prev => ({ ...prev, [liftId]: { settings: d.summary ?? "", generatedAt: d.createdAt ?? null } }));
+    } catch {
+      // The summary is optional; the row still works without it.
     }
-  }, [session]);
+  }, []);
 
-  const fetchLifts = async () => {
+  // A few at a time so a long list doesn't fire dozens of Drive requests at once.
+  const fetchSummaries = useCallback(async (ids: string[]) => {
+    const queue = [...ids];
+    const worker = async () => {
+      for (let id = queue.shift(); id; id = queue.shift()) await fetchSummary(id);
+    };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+  }, [fetchSummary]);
+
+  const fetchLifts = useCallback(async () => {
     setLoadingLifts(true);
     try {
       const res = await fetch("/api/lifts");
       const data = await res.json();
       if (data.lifts) {
         setLifts(data.lifts);
+        setLiftsLoaded(true);
+        fetchSummaries(data.lifts.map((l: Lift) => l.id));
       }
     } catch (error) {
       console.error("Failed to fetch lifts", error);
     } finally {
       setLoadingLifts(false);
     }
-  };
+  }, [fetchSummaries]);
+
+  useEffect(() => {
+    // Without Drive access every Drive call fails; the banner explains it instead of an empty list
+    if (session && session.error !== "MissingDriveScope") {
+      fetchLifts();
+    }
+  }, [session, fetchLifts]);
 
   const handleDelete = async (liftId: string) => {
     if (!confirm("Are you sure? This deletes the folder from your Drive.")) return;
@@ -71,12 +100,14 @@ export default function Home() {
     }
   };
 
-  // Compute "Energy" Estimate
   const totalLifts = (lifts && lifts.length) || 0;
-  const estimatedEnergy = Math.min(100, (totalLifts * 12.5));
 
   if (!session) {
     return <LandingPage />;
+  }
+
+  if (session.error === "MissingDriveScope") {
+    return <main className="min-h-screen" />;
   }
 
   return (
@@ -84,45 +115,31 @@ export default function Home() {
       <div className="max-w-[1440px] mx-auto px-8 md:px-16 py-12">
         <div className="space-y-24">
 
-          {/* Row 1: Operations Data */}
-          <div className="grid grid-cols-12 gap-8">
-            <div className="col-span-12 md:col-span-4 bg-surface swiss-border p-8 space-y-6">
-              <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <div className="text-[13px] mono text-foreground-muted uppercase tracking-widest">Compute Load</div>
-                  <div className="text-3xl font-black">{estimatedEnergy}%</div>
-                </div>
-                <Zap className="text-accent w-6 h-6" />
-              </div>
-              <div className="w-full bg-background h-1">
-                <div className="bg-accent h-full transition-all duration-1000" style={{ width: `${estimatedEnergy}%` }} />
-              </div>
-              <div className="text-[12px] mono text-foreground-muted uppercase tracking-wider leading-relaxed">
-                Estimate based on session activity. Refreshes every 24h.
-              </div>
-            </div>
+          <WhatsNew ready={liftsLoaded} hasLifts={lifts.length > 0} />
 
-            <div className="col-span-12 md:col-span-4 bg-surface swiss-border p-8 space-y-6">
+          {/* Row 1: Summary */}
+          <div className="grid grid-cols-12 gap-8">
+            <div className="col-span-12 md:col-span-6 bg-surface swiss-border p-8 space-y-6">
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
-                  <div className="text-[13px] mono text-foreground-muted uppercase tracking-widest">Active Lifts</div>
+                  <div className="text-[13px] mono text-foreground-muted uppercase tracking-widest">Renders</div>
                   <div className="text-3xl font-black">{totalLifts}</div>
                 </div>
                 <Activity className="text-foreground-muted w-6 h-6" />
               </div>
               <div className="text-[12px] mono text-foreground-muted uppercase tracking-wider leading-relaxed">
-                Total render instances registered in your Google Drive storage.
+                Saved in your Google Drive under RenderLift/Lifts.
               </div>
             </div>
 
-            <div className="col-span-12 md:col-span-4 bg-surface border border-accent/20 p-8 flex flex-col justify-between group hover:border-accent transition-colors">
-              <div className="text-base font-bold leading-tight">Start a new secure render pipeline using remote cloud nodes.</div>
+            <div className="col-span-12 md:col-span-6 bg-surface border border-accent/20 p-8 flex flex-col justify-between group hover:border-accent transition-colors">
+              <div className="text-base font-bold leading-tight">Upload a Blender file and get a notebook that renders it on a free Google Colab GPU.</div>
               <Link
                 href="/new"
                 className="mt-6 flex items-center gap-3 text-[15px] font-black uppercase tracking-widest text-accent group-hover:gap-5 transition-all"
               >
                 <Plus className="w-4 h-4" />
-                New Operation_
+                New render
               </Link>
             </div>
           </div>
@@ -130,19 +147,18 @@ export default function Home() {
           {/* Row 2: Recent History */}
           <div className="space-y-8 pb-24">
             <div className="flex justify-between items-end border-b border-border-subtle pb-4">
-              <h2 className="text-[15px] font-black uppercase tracking-[0.2em] text-foreground-muted">Recent Render History</h2>
-              <div className="text-[13px] mono text-foreground-muted uppercase">Sync Status: Online</div>
+              <h2 className="text-[15px] font-black uppercase tracking-[0.2em] text-foreground-muted">Your renders</h2>
             </div>
 
             {loadingLifts ? (
               <div className="py-24 flex items-center gap-4 text-accent animate-pulse">
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span className="text-[15px] font-bold uppercase tracking-widest">Polling Google Drive Data...</span>
+                <span className="text-[15px] font-bold uppercase tracking-widest">Loading your renders...</span>
               </div>
             ) : (!lifts || lifts.length === 0) ? (
               <div className="py-32 border border-border-subtle border-dashed flex flex-col items-center justify-center text-center space-y-6">
-                <div className="text-[13px] mono text-foreground-muted uppercase">Storage Empty</div>
-                <p className="text-base max-w-xs text-foreground-muted leading-relaxed">No render lifts found. Click "New Operation" to begin.</p>
+                <div className="text-[13px] mono text-foreground-muted uppercase">No renders yet</div>
+                <p className="text-base max-w-xs text-foreground-muted leading-relaxed">Click &quot;New render&quot; to upload your first Blender file.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-1">
@@ -152,7 +168,8 @@ export default function Home() {
                     className="grid grid-cols-12 gap-8 items-center bg-surface swiss-border border-transparent hover:border-border-subtle p-6 transition-all group"
                   >
                     <div className="col-span-1 text-[13px] mono text-foreground-muted">0{i + 1}</div>
-                    <div className="col-span-11 md:col-span-5">
+                    <div className="col-span-11 md:col-span-3 flex items-center gap-4">
+                      <div className="min-w-0 flex-1">
                       {renamingId === lift.id ? (
                         <div className="flex items-center gap-4">
                           <input
@@ -172,18 +189,32 @@ export default function Home() {
                           </button>
                         </div>
                       )}
+                      </div>
                     </div>
-                    <div className="col-span-6 md:col-span-3 text-[13px] mono text-foreground-muted uppercase">
-                      {new Date(lift.createdTime).toLocaleDateString()} / {new Date(lift.createdTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <div className="col-span-12 md:col-span-4 text-[13px] mono uppercase space-y-1">
+                      {summaries[lift.id]?.settings && (
+                        <div className="text-foreground">{summaries[lift.id].settings}</div>
+                      )}
+                      <div className="text-[12px] text-foreground-muted">
+                        {summaries[lift.id]?.generatedAt
+                          ? `Notebook updated ${timeAgo(summaries[lift.id].generatedAt)}`
+                          : `Created ${new Date(lift.createdTime).toLocaleDateString()} / ${new Date(lift.createdTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                      </div>
                     </div>
-                    <div className="col-span-6 md:col-span-3 flex justify-end gap-6 items-center">
+                    <div className="col-span-12 md:col-span-4 flex justify-end gap-6 items-center">
+                      <Link
+                        href={`/new?lift=${encodeURIComponent(lift.id)}`}
+                        className="text-[13px] font-black uppercase tracking-widest text-foreground-muted hover:text-accent transition-all"
+                      >
+                        Re-render
+                      </Link>
                       <a
                         href={`https://drive.google.com/drive/folders/${lift.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[13px] font-black uppercase tracking-widest text-accent hover:text-white hover:bg-accent px-2 py-1 transition-all"
                       >
-                        View_Output
+                        View output
                       </a>
                       <button
                         onClick={() => handleDelete(lift.id)}

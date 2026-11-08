@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react";
 import { Activity } from "lucide-react";
 import { Logo } from "./Logo";
+import { markSignInPending } from "@/lib/analytics";
 
 export function LandingPage() {
     return (
@@ -15,7 +16,7 @@ export function LandingPage() {
                             <div>
                                 <span className="text-orange-500">Render</span>
                                 <span className="text-blue-500">Lift</span>
-                                <span className="text-accent ml-2">/</span> 1.0
+                                <span className="text-accent ml-2">/</span> 1.1
                             </div>
                         </div>
                         <h1 className="text-5xl md:text-7xl font-bold leading-[1.1] tracking-tight max-w-3xl">
@@ -23,11 +24,11 @@ export function LandingPage() {
                         </h1>
                         <div className="flex flex-col items-start gap-4">
                             <button
-                                onClick={() => signIn("google")}
+                                onClick={() => { markSignInPending(); signIn("google") }}
                                 className="px-10 py-5 bg-accent text-white font-bold uppercase tracking-widest text-sm hover:bg-blue-600 transition-all active:scale-95 flex items-center gap-3"
                             >
                                 <Activity className="w-4 h-4" />
-                                Initialize Operations_
+                                Sign in with Google
                             </button>
                         </div>
                     </div>
@@ -54,7 +55,7 @@ export function LandingPage() {
                             Developer Note_
                         </div>
                         <p className="text-base text-foreground-muted leading-relaxed max-w-4xl font-mono">
-                            RenderLift was built to solve the "GPU bottleneck" for independent artists. By bridging the gap between local project files and massive cloud compute nodes, we turn a standard Google account into a high-performance render farm. This project is in active development—focusing on extreme Swiss minimalism and pure technical efficiency.
+                            RenderLift was built to solve the &quot;GPU bottleneck&quot; for independent artists. By bridging the gap between local project files and massive cloud compute nodes, we turn a standard Google account into a high-performance render farm. This project is in active development—focusing on extreme Swiss minimalism and pure technical efficiency.
                         </p>
                     </div>
                 </div>

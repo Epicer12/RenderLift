@@ -1,29 +1,59 @@
 import { RenderSettings } from "@/components/RenderForm";
+import { blenderDownloadUrl } from "@/lib/blenderVersions";
+
+// Python string literal for any value (JSON strings are valid Python strings),
+// so names like "Tom's scene.blend" can't break the generated code.
+const py = (value: string) => JSON.stringify(value);
+
+const pick = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T =>
+    allowed.includes(value as T) ? value as T : fallback;
+
+const toInt = (value: unknown, fallback: number) => {
+    const n = Math.floor(Number(value));
+    return Number.isFinite(n) && n >= 0 ? n : fallback;
+};
 
 export function generateNotebookJson(
-    fileName: string, // e.g., "MyScene.blend"
+    fileName: string, // e.g., "MyScene.blend" or "MyProject.zip"
     fileId: string, // ID of the uploaded file on Drive
     folderName: string, // e.g. "BlenderCloudRender/Job_123"
-    settings: RenderSettings
+    settings: RenderSettings,
+    options: {
+        // Identifies this generated notebook. A different id than the one stored in Renders/
+        // means the notebook is a new run, so the previous output may need archiving.
+        runId?: string,
+        // True for re-renders: move the previous Renders/ aside instead of mixing old and new frames.
+        archivePrevious?: boolean,
+    } = {}
 ) {
-    const { version, startFrame, endFrame, format, device, samples } = settings;
+    const runId = /^[A-Za-z0-9-]{1,64}$/.test(options.runId ?? '') ? options.runId! : 'initial';
+    const archivePrevious = options.archivePrevious === true;
+    // Settings arrive from the browser and end up as code, so only accept known values
+    const engine = pick(settings.engine, ['SCENE', 'CYCLES', 'EEVEE'] as const, 'SCENE');
+    const format = pick(settings.format, ['PNG', 'JPEG', 'OPEN_EXR'] as const, 'PNG');
+    const device = pick(settings.device, ['CUDA', 'OPTIX', 'CPU'] as const, 'CUDA');
+    const startFrame = toInt(settings.startFrame, 1);
+    const endFrame = Math.max(startFrame, toInt(settings.endFrame, startFrame));
+    const samples = toInt(settings.samples, 0);
+    const resolutionPercent = [25, 50, 75, 100].includes(Number(settings.resolutionPercent)) ? Number(settings.resolutionPercent) : 0; // 0 keeps the saved size
+    const frameStep = Math.min(Math.max(1, toInt(settings.frameStep, 1)), 10000);
+    const denoise = pick(settings.denoise, ['SCENE', 'ON', 'OFF'] as const, 'SCENE');
+    // JPEG has no alpha channel, so a transparent background is ignored for it
+    const transparent = format === 'JPEG' ? 'SCENE' : pick(settings.transparent, ['SCENE', 'ON', 'OFF'] as const, 'SCENE');
+    const extras = [
+        resolutionPercent > 0 ? `${resolutionPercent}% size` : '',
+        frameStep > 1 ? `frame step ${frameStep}` : '',
+        denoise !== 'SCENE' ? `denoise ${denoise === 'ON' ? 'on' : 'off'}` : '',
+        transparent !== 'SCENE' ? `transparent background ${transparent === 'ON' ? 'on' : 'off'}` : '',
+    ].filter(Boolean);
+    // "Scene default" may turn out to be EEVEE, so only an explicit Cycles choice skips the virtual display
+    const needsDisplay = engine !== 'CYCLES';
 
-    // Blender download URL map
-    const blenderUrls: Record<string, string> = {
-        '2.83.20': 'https://download.blender.org/release/Blender2.83/blender-2.83.20-linux-x64.tar.xz',
-        '2.93.18': 'https://download.blender.org/release/Blender2.93/blender-2.93.18-linux-x64.tar.xz',
-        '3.3.15': 'https://download.blender.org/release/Blender3.3/blender-3.3.15-linux-x64.tar.xz',
-        '3.6.13': 'https://download.blender.org/release/Blender3.6/blender-3.6.13-linux-x64.tar.xz',
-        '4.0.2': 'https://download.blender.org/release/Blender4.0/blender-4.0.2-linux-x64.tar.xz',
-        '4.1.1': 'https://download.blender.org/release/Blender4.1/blender-4.1.1-linux-x64.tar.xz',
-        '4.2.0': 'https://download.blender.org/release/Blender4.2/blender-4.2.0-linux-x64.tar.xz',
-        '4.3.0': 'https://download.blender.org/release/Blender4.3/blender-4.3.0-linux-x64.tar.xz',
-        '4.5.3': 'https://download.blender.org/release/Blender4.5/blender-4.5.3-linux-x64.tar.xz',
-    };
-
-    const blenderUrl = blenderUrls[version] || blenderUrls['3.6.2'];
-    const blenderArchive = blenderUrl.split('/').pop()!; // "blender-3.6.2-linux-x64.tar.xz"
-    const blenderDir = blenderArchive.replace('.tar.xz', ''); // "blender-3.6.2-linux-x64"
+    const blenderUrl = blenderDownloadUrl(settings.version);
+    const blenderArchive = blenderUrl.split('/').pop()!; // "blender-4.2.23-linux-x64.tar.xz"
+    const blenderDir = blenderArchive.replace('.tar.xz', ''); // "blender-4.2.23-linux-x64"
+    const blenderVersion = blenderDir.split('-')[1];
+    const liftDir = `/content/drive/MyDrive/${folderName}`;
 
     // Construct the cells
     const cells = [
@@ -33,7 +63,7 @@ export function generateNotebookJson(
             source: [
                 "# RenderLift - Cloud Render Lift\n",
                 `**File**: ${fileName}\n`,
-                `**Settings**: Frames ${startFrame}-${endFrame} | ${format} | ${device}\n`,
+                `**Settings**: Frames ${startFrame}-${endFrame} | ${format} | ${engine === 'SCENE' ? 'Scene engine' : engine} | ${device}${extras.length ? ` | ${extras.join(' | ')}` : ''}\n`,
                 "Run the cells below to start rendering!"
             ]
         },
@@ -54,7 +84,7 @@ export function generateNotebookJson(
             metadata: {},
             outputs: [],
             source: [
-                `# 2. Smart Install Blender ${version}\n`,
+                `# 2. Smart Install Blender ${blenderVersion}\n`,
                 "# Checks 'RenderLift/Blender' folder for cached versions to save time.\n",
                 "\n",
                 "import os\n",
@@ -90,45 +120,186 @@ export function generateNotebookJson(
             metadata: {},
             outputs: [],
             source: [
-                `# 3. Run Render Command\n`,
-                `# Configuration\n`,
-                `samples = ${samples || 0}\n`,
+                "# 3. Prepare Scene\n",
+                "# For .zip uploads: extracts the project and finds the .blend inside.\n",
+                "# A single .blend at the top of the zip (or inside one wrapper folder) is used automatically.\n",
+                "# If it's unclear which one to render, type the file name here and re-run this cell.\n",
+                "BLEND_CHOICE = \"\"  #@param {type:\"string\"}\n",
+                "\n",
+                "import os, glob, zipfile\n",
+                "\n",
+                `LIFT_DIR = ${py(liftDir)}\n`,
+                `SOURCE_FILE = os.path.join(LIFT_DIR, ${py(fileName)})\n`,
+                "\n",
+                "if SOURCE_FILE.lower().endswith('.zip'):\n",
+                "    extract_dir = '/content/scene'\n",
+                "    if not os.path.exists(extract_dir):\n",
+                "        print('Extracting project zip...')\n",
+                "        with zipfile.ZipFile(SOURCE_FILE) as z:\n",
+                "            z.extractall(extract_dir)\n",
+                "    blends = sorted(p for p in glob.glob(f'{extract_dir}/**/*.blend', recursive=True) if '__MACOSX' not in p)\n",
+                "    if BLEND_CHOICE:\n",
+                "        blends = [p for p in blends if os.path.relpath(p, extract_dir) == BLEND_CHOICE or os.path.basename(p) == BLEND_CHOICE]\n",
+                "    else:\n",
+                "        # Auto-pick: exactly one .blend at the top level (linked libraries in subfolders are ignored).\n",
+                "        # If the zip is one wrapper folder, look inside it instead.\n",
+                "        top = extract_dir\n",
+                "        entries = [e for e in os.listdir(extract_dir) if e != '__MACOSX']\n",
+                "        if len(entries) == 1 and os.path.isdir(os.path.join(extract_dir, entries[0])):\n",
+                "            top = os.path.join(extract_dir, entries[0])\n",
+                "        top_blends = [p for p in blends if os.path.dirname(p) == top]\n",
+                "        if len(top_blends) == 1:\n",
+                "            blends = top_blends\n",
+                "    if not blends:\n",
+                "        raise RuntimeError('No .blend file found in the zip' + (f' matching {BLEND_CHOICE!r}' if BLEND_CHOICE else ''))\n",
+                "    if len(blends) > 1:\n",
+                "        print('This zip contains several .blend files:')\n",
+                "        for p in blends:\n",
+                "            print('  ' + os.path.relpath(p, extract_dir))\n",
+                "        raise RuntimeError('Set BLEND_CHOICE above to the file you want to render, then run this cell again.')\n",
+                "    blend_path = blends[0]\n",
+                "else:\n",
+                "    blend_path = SOURCE_FILE\n",
+                "\n",
+                "print(f'Scene: {blend_path}')"
+            ]
+        },
+        {
+            cell_type: "code",
+            execution_count: null,
+            metadata: {},
+            outputs: [],
+            source: [
+                "%%writefile /content/renderlift_setup.py\n",
+                "# 4. Render Overrides (applied by Blender after the scene loads)\n",
+                "import bpy\n",
+                "\n",
+                `ENGINE = ${py(engine)}  # 'SCENE' keeps the engine saved in the .blend\n`,
+                `SAMPLES = ${samples}  # 0 keeps the samples saved in the .blend\n`,
+                `RESOLUTION_PERCENT = ${resolutionPercent}  # 0 keeps the resolution saved in the .blend\n`,
+                `DENOISE = ${py(denoise)}  # 'SCENE' keeps the saved setting (Cycles only)\n`,
+                `TRANSPARENT = ${py(transparent)}  # 'SCENE' keeps the saved setting\n`,
+                "\n",
+                "scene = bpy.context.scene\n",
+                "if ENGINE == 'CYCLES':\n",
+                "    scene.render.engine = 'CYCLES'\n",
+                "elif ENGINE == 'EEVEE':\n",
+                "    # EEVEE's id changed across versions (BLENDER_EEVEE / BLENDER_EEVEE_NEXT)\n",
+                "    for engine_id in ('BLENDER_EEVEE', 'BLENDER_EEVEE_NEXT'):\n",
+                "        try:\n",
+                "            scene.render.engine = engine_id\n",
+                "            break\n",
+                "        except TypeError:\n",
+                "            pass\n",
+                "\n",
+                "# Resume: with overwrite off, Blender skips frames whose file already exists.\n",
+                "# The render cell sets RENDERLIFT_SKIP_EXISTING from its SKIP_EXISTING checkbox.\n",
+                "import os\n",
+                "scene.render.use_overwrite = os.environ.get('RENDERLIFT_SKIP_EXISTING', '1') != '1'\n",
+                "\n",
+                "if SAMPLES > 0:\n",
+                "    if hasattr(scene, 'cycles'):\n",
+                "        scene.cycles.samples = SAMPLES\n",
+                "    if hasattr(scene, 'eevee'):\n",
+                "        scene.eevee.taa_render_samples = SAMPLES\n",
+                "\n",
+                "if RESOLUTION_PERCENT > 0:\n",
+                "    scene.render.resolution_percentage = RESOLUTION_PERCENT\n",
+                "if DENOISE != 'SCENE' and hasattr(scene, 'cycles'):\n",
+                "    scene.cycles.use_denoising = (DENOISE == 'ON')\n",
+                "if TRANSPARENT != 'SCENE':\n",
+                "    scene.render.film_transparent = (TRANSPARENT == 'ON')\n",
+                "    if TRANSPARENT == 'ON':\n",
+                "        # Without an alpha channel the image can't hold the transparency (PNG defaults to RGB)\n",
+                "        scene.render.image_settings.color_mode = 'RGBA'\n",
+                "\n",
+                "r = scene.render\n",
+                "denoise_now = scene.cycles.use_denoising if hasattr(scene, 'cycles') else 'n/a'\n",
+                "print(f'RenderLift: engine={r.engine} size={r.resolution_x}x{r.resolution_y} at {r.resolution_percentage}% denoise={denoise_now} transparent={r.film_transparent}')"
+            ]
+        },
+        {
+            cell_type: "code",
+            execution_count: null,
+            metadata: {},
+            outputs: [],
+            source: [
+                `# 5. Run Render Command\n`,
+                `import os, shlex\n`,
+                `\n`,
+                `# After a Colab disconnect, run the cells again: frames that are already in Renders/ are skipped.\n`,
+                `# Untick this to render every frame again and overwrite the old ones.\n`,
+                `SKIP_EXISTING = True  #@param {type:"boolean"}\n`,
+                `\n`,
                 `start_frame = ${startFrame}\n`,
                 `end_frame = ${endFrame}\n`,
-                `device = '${device}'\n`,
-                `format = '${format}'\n`,
-                `blender_dir = '${blenderDir}'\n`,
+                `frame_step = ${frameStep}  # render every Nth frame\n`,
+                `device = ${py(device)}\n`,
+                `out_format = ${py(format)}\n`,
+                `blender_dir = ${py(blenderDir)}\n`,
                 `\n`,
-                `output_dir = '/content/drive/MyDrive/${folderName}/Renders'\n`,
-                `if not os.path.exists(output_dir):\n`,
-                `    os.makedirs(output_dir)\n`,
+                `output_dir = os.path.join(LIFT_DIR, 'Renders')\n`,
                 `\n`,
-                `filename = '/content/drive/MyDrive/${folderName}/${fileName}'\n`,
-                `output_path = f'{output_dir}/render_'\n`,
+                `# Re-renders move the previous output to Renders_<time> once, so old and new frames don't mix.\n`,
+                `# Running this cell again in the same notebook (e.g. after a disconnect) keeps the frames.\n`,
+                `RUN_ID = ${py(runId)}\n`,
+                `ARCHIVE_PREVIOUS = ${archivePrevious ? 'True' : 'False'}\n`,
+                `run_marker = os.path.join(output_dir, '.renderlift_run')\n`,
+                `previous_run = open(run_marker).read().strip() if os.path.exists(run_marker) else None\n`,
+                `if ARCHIVE_PREVIOUS and previous_run != RUN_ID and os.path.isdir(output_dir) and os.listdir(output_dir):\n`,
+                `    import shutil, time\n`,
+                `    archive_dir = f'{output_dir}_' + time.strftime('%Y%m%d_%H%M%S')\n`,
+                `    shutil.move(output_dir, archive_dir)\n`,
+                `    print(f'Previous output moved to {os.path.basename(archive_dir)}')\n`,
+                `os.makedirs(output_dir, exist_ok=True)\n`,
+                `with open(run_marker, 'w') as f:\n`,
+                `    f.write(RUN_ID)\n`,
                 `\n`,
-                `# Quality Override (Only if samples > 0)\n`,
-                `quality_override = f'--python-expr "import bpy; bpy.context.scene.cycles.samples = {samples}; bpy.context.scene.eevee.taa_render_samples = {samples}"' if samples > 0 else ''\n`,
+                `# A frame cut off by a disconnect can be left empty; remove those so they get rendered again.\n`,
+                `for name in os.listdir(output_dir):\n`,
+                `    path = os.path.join(output_dir, name)\n`,
+                `    if name.startswith('render_') and os.path.isfile(path) and os.path.getsize(path) == 0:\n`,
+                `        os.remove(path)\n`,
                 `\n`,
-                `# Construct final command\n`,
-                `cmd = f"./{blender_dir}/blender -b '{filename}' -noaudio -E 'CYCLES' -F '{format}' -o '{output_path}' {quality_override} -s {start_frame} -e {end_frame} -a -- --cycles-device {device}"\n`,
-                `print(f'Executing: {cmd}')\n`,
-                `!{cmd}`
+                `existing = [n for n in os.listdir(output_dir) if n.startswith('render_')]\n`,
+                `if SKIP_EXISTING and existing:\n`,
+                `    print(f'Resuming: {len(existing)} existing frame(s) in Renders/ will be skipped.')\n`,
+                `os.environ['RENDERLIFT_SKIP_EXISTING'] = '1' if SKIP_EXISTING else '0'\n`,
+                `\n`,
+                `cmd = [\n`,
+                `    f'./{blender_dir}/blender', '-b', blend_path, '-noaudio',\n`,
+                `    '--python', '/content/renderlift_setup.py',\n`,
+                `    '-o', f'{output_dir}/render_', '-F', out_format,\n`,
+                `    '-s', str(start_frame), '-e', str(end_frame), '-j', str(frame_step), '-a',\n`,
+                `    '--', '--cycles-device', device,\n`,
+                `]\n`,
+                `\n`,
+                `# EEVEE needs an OpenGL display, which a Colab machine doesn't have. A virtual display (xvfb)\n`,
+                `# gives it one (software OpenGL, so it is slower than Cycles). Cycles doesn't need it.\n`,
+                `USE_VIRTUAL_DISPLAY = ${needsDisplay ? 'True' : 'False'}\n`,
+                `if USE_VIRTUAL_DISPLAY:\n`,
+                `    !which xvfb-run > /dev/null || (apt-get -qq update && apt-get -qq install -y xvfb > /dev/null)\n`,
+                `    cmd = ['xvfb-run', '-a', '-s', '-screen 0 1280x720x24'] + cmd\n`,
+                `\n`,
+                `cmd_line = shlex.join(cmd)\n`,
+                `print(f'Executing: {cmd_line}')\n`,
+                `!{cmd_line}`
             ]
         }
     ];
 
-    // 4. Optional Video Stitching (only if multi-frame and requested)
+    // 6. Optional Video Stitching (only if multi-frame and requested)
     if (endFrame > startFrame && settings.generateVideo) {
         cells.push({
             cell_type: "markdown",
             metadata: {},
             source: [
-                "## 4. (Optional) Generate Video\n",
+                "## 6. (Optional) Generate Video\n",
                 "This step is **optional**. It will combine your rendered frames into a single MP4 video file using FFmpeg."
             ]
         });
 
-        const extension = format.toLowerCase() === 'jpeg' ? 'jpg' : format.toLowerCase();
+        const extension = format === 'JPEG' ? 'jpg' : format.toLowerCase();
 
         cells.push({
             cell_type: "code",
@@ -138,7 +309,7 @@ export function generateNotebookJson(
             source: [
                 `# Generate MP4 Video\n`,
                 `import os\n`,
-                `output_dir = '/content/drive/MyDrive/${folderName}/Renders'\n`,
+                `output_dir = os.path.join(${py(liftDir)}, 'Renders')\n`,
                 `video_output = f'{output_dir}/render_animation.mp4'\n`,
                 `fps = 24 # Change this if needed\n`,
                 `\n`,
@@ -161,6 +332,44 @@ export function generateNotebookJson(
             ]
         });
     }
+
+    // 7. Optional download of the frames as a zip. Off by default, so "Run all" never starts a download.
+    cells.push({
+        cell_type: "markdown",
+        metadata: {},
+        source: [
+            "## 7. (Optional) Download the frames as a zip\n",
+            "Your frames always stay in Google Drive under `Renders/`. To also get them as one zip in your browser, tick **DOWNLOAD_ZIP** and run this cell."
+        ]
+    });
+    cells.push({
+        cell_type: "code",
+        execution_count: null,
+        metadata: {},
+        outputs: [],
+        source: [
+            "# Download the rendered frames as a zip\n",
+            "DOWNLOAD_ZIP = False  #@param {type:\"boolean\"}\n",
+            "\n",
+            "if DOWNLOAD_ZIP:\n",
+            "    import os, zipfile\n",
+            "    from google.colab import files\n",
+            "    output_dir = os.path.join(LIFT_DIR, 'Renders')\n",
+            "    zip_path = '/content/renderlift_frames.zip'\n",
+            "    names = sorted(n for n in os.listdir(output_dir) if not n.startswith('.') and os.path.isfile(os.path.join(output_dir, n)))\n",
+            "    if not names:\n",
+            "        print('No rendered frames found in Renders/ yet.')\n",
+            "    else:\n",
+            "        # Frames are already compressed (PNG/JPEG/MP4), so just store them\n",
+            "        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_STORED) as z:\n",
+            "            for n in names:\n",
+            "                z.write(os.path.join(output_dir, n), n)\n",
+            "        print(f'Zipped {len(names)} file(s). Starting the download...')\n",
+            "        files.download(zip_path)\n",
+            "else:\n",
+            "    print('Tick DOWNLOAD_ZIP and run this cell to download the frames as a zip.')"
+        ]
+    });
 
     // Full Notebook JSON Structure
     return {

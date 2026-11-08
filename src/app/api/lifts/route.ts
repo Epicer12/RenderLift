@@ -4,14 +4,14 @@ import { authOptions } from "@/lib/auth";
 import { getDriveClient, findOrCreateFolder, listFolders, deleteFile, renameFile } from "@/lib/drive";
 
 // GET /api/lifts - List all lifts
-export async function GET(req: NextRequest) {
+export async function GET() {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).accessToken) {
+    if (!session || !session.accessToken) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     try {
-        const drive = getDriveClient((session as any).accessToken);
+        const drive = getDriveClient(session.accessToken);
 
         // Find RenderLift/Lifts
         const rootId = await findOrCreateFolder(drive, "RenderLift");
@@ -20,16 +20,16 @@ export async function GET(req: NextRequest) {
         const lifts = await listFolders(drive, liftsId);
 
         return NextResponse.json({ lifts });
-    } catch (error: any) {
+    } catch (error) {
         console.error("ListLiftsError", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: (error as Error).message }, { status: 500 });
     }
 }
 
 // DELETE /api/lifts - Delete a lift
 export async function DELETE(req: NextRequest) {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).accessToken) {
+    if (!session || !session.accessToken) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -39,19 +39,19 @@ export async function DELETE(req: NextRequest) {
     }
 
     try {
-        const drive = getDriveClient((session as any).accessToken);
+        const drive = getDriveClient(session.accessToken);
         await deleteFile(drive, liftId);
         return NextResponse.json({ success: true });
-    } catch (error: any) {
+    } catch (error) {
         console.error("DeleteLiftError", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: (error as Error).message }, { status: 500 });
     }
 }
 
 // PATCH /api/lifts - Rename a lift
 export async function PATCH(req: NextRequest) {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).accessToken) {
+    if (!session || !session.accessToken) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -61,11 +61,11 @@ export async function PATCH(req: NextRequest) {
     }
 
     try {
-        const drive = getDriveClient((session as any).accessToken);
+        const drive = getDriveClient(session.accessToken);
         await renameFile(drive, liftId, newName);
         return NextResponse.json({ success: true });
-    } catch (error: any) {
+    } catch (error) {
         console.error("RenameLiftError", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: (error as Error).message }, { status: 500 });
     }
 }

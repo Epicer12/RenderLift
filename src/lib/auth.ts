@@ -2,6 +2,13 @@ import GoogleProvider from "next-auth/providers/google";
 import { AuthOptions, TokenSet } from "next-auth";
 import { JWT } from "next-auth/jwt";
 
+const DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+
+// Google reports the scopes it actually granted (a user can untick Drive on the consent screen,
+// or remove it later in their Google Account). undefined means "not reported": assume it's fine.
+const lacksDriveScope = (scope: unknown) =>
+    typeof scope === "string" && !scope.split(" ").includes(DRIVE_FILE_SCOPE);
+
 // Helper function to refresh the access token
 async function refreshAccessToken(token: JWT): Promise<JWT> {
     try {
@@ -36,6 +43,7 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
             accessToken: refreshedTokens.access_token,
             accessTokenExpires: Date.now() + (refreshedTokens.expires_in as number) * 1000,
             refreshToken: refreshedTokens.refresh_token ?? token.refreshToken, // Fallback to old refresh token
+            error: lacksDriveScope(refreshedTokens.scope) ? "MissingDriveScope" : undefined,
         };
     } catch (error) {
         console.error("RefreshAccessTokenError", error);
@@ -54,7 +62,9 @@ export const authOptions: AuthOptions = {
             authorization: {
                 params: {
                     scope: "openid email profile https://www.googleapis.com/auth/drive.file",
-                    prompt: "consent",
+                    // No forced "consent" prompt: returning users sign in silently.
+                    // Google only issues a refresh token on consent, so when it is missing
+                    // the client re-runs sign-in with prompt=consent (see SessionGuard).
                     access_type: "offline", // Essential for getting a refresh token
                     response_type: "code"
                 }
@@ -65,18 +75,17 @@ export const authOptions: AuthOptions = {
         async jwt({ token, account, user }) {
             // Initial sign in
             if (account && user) {
-                console.log("ACCOUNT TOKENS:", {
-                    access: account.access_token,
-                    refresh: account.refresh_token,
-                    expires_in: account.expires_in,
-                });
-
                 return {
                     ...token,
                     accessToken: account.access_token,
-                    accessTokenExpires: Date.now() + ((account as any).expires_in ?? 3600) * 1000,
+                    accessTokenExpires: Date.now() + (typeof account.expires_in === "number" ? account.expires_in : 3600) * 1000,
                     refreshToken: account.refresh_token,
                     user,
+                    // Missing Drive access is reported first: the user has to grant it themselves
+                    // (banner), whereas a missing refresh token is fixed by an automatic re-consent.
+                    error: lacksDriveScope(account.scope)
+                        ? "MissingDriveScope"
+                        : account.refresh_token ? undefined : "MissingRefreshToken",
                 };
             }
 
@@ -89,9 +98,8 @@ export const authOptions: AuthOptions = {
             return refreshAccessToken(token);
         },
         async session({ session, token }) {
-            // @ts-ignore
-            session.accessToken = token.accessToken;
-            // @ts-ignore
+            // Never hand out a token we know is stale; API routes then answer 401
+            session.accessToken = token.error ? undefined : token.accessToken;
             session.error = token.error;
             return session;
         },
