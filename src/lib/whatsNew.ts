@@ -9,9 +9,12 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
     {
-        id: "2026-11-07",
-        date: "November 7, 2026",
+        id: "2026-11-08",
+        date: "November 8, 2026",
         items: [
+            "New render options: image size (25-100%), render every Nth frame, denoise on/off and a transparent background.",
+            "EEVEE scenes now render on Colab (slower than Cycles, so Cycles is still the faster choice).",
+            "An optional last step in the notebook downloads your frames as a zip.",
             "Zip projects with a single .blend file at the top now render without any extra setup.",
             "Your dashboard shows the settings each render uses and when its notebook was last updated.",
             "Re-render any earlier render with new settings, without uploading again.",
