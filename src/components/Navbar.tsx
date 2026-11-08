@@ -34,7 +34,7 @@ export function Navbar() {
                                 <span className="text-blue-500">Render</span>
                                 <span className="text-orange-500">Lift</span>
                                 <span className="text-accent ml-1">/</span>
-                                <span className="text-[13px] mono text-foreground-muted group-hover:text-foreground transition-colors">1.0</span>
+                                <span className="text-[13px] mono text-foreground-muted group-hover:text-foreground transition-colors">1.1</span>
                             </div>
                         </Link>
                     </div>
