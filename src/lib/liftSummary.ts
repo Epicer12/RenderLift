@@ -19,6 +19,12 @@ export function summarizeSettings(s: Partial<RenderSettings>): string {
     parts.push(ENGINE_LABEL[s.engine ?? "SCENE"] ?? "Scene engine");
     if (s.format) parts.push(s.format === "OPEN_EXR" ? "EXR" : s.format);
     if (s.version) parts.push(`Blender ${s.version}`);
+    if (s.resolutionPercent) parts.push(`${s.resolutionPercent}% size`);
+    if (s.frameStep && s.frameStep > 1) parts.push(`frame step ${s.frameStep}`);
+    if (s.denoise === "ON" || s.denoise === "OFF") parts.push(`denoise ${s.denoise === "ON" ? "on" : "off"}`);
+    if (s.format !== "JPEG" && (s.transparent === "ON" || s.transparent === "OFF")) {
+        parts.push(`transparent bg ${s.transparent === "ON" ? "on" : "off"}`);
+    }
     if (s.generateVideo) parts.push("video");
     return parts.join(" · ");
 }
