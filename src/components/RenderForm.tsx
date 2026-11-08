@@ -15,6 +15,9 @@ interface RenderFormProps {
 // SCENE keeps whatever engine the .blend file was saved with
 export type RenderEngine = 'SCENE' | 'CYCLES' | 'EEVEE'
 
+// SCENE keeps whatever the .blend file has saved; ON / OFF force the setting
+export type SceneToggle = 'SCENE' | 'ON' | 'OFF'
+
 export interface RenderSettings {
     version: string
     startFrame: number
@@ -24,12 +27,18 @@ export interface RenderSettings {
     engine?: RenderEngine
     generateVideo?: boolean
     samples?: number
+    resolutionPercent?: number // 25 / 50 / 75 / 100 of the scene resolution; undefined keeps the saved size
+    frameStep?: number // render every Nth frame (1 = every frame)
+    denoise?: SceneToggle // Cycles only
+    transparent?: SceneToggle // transparent background (PNG / OpenEXR)
 }
 
 export function RenderForm({ fileName, onStartRender, disabled, initialSettings }: RenderFormProps) {
     const [settings, setSettings] = useState<RenderSettings>(() => ({ ...getUserDefaults(), ...initialSettings }))
 
     const isRangeInvalid = settings.startFrame > settings.endFrame;
+    const frameStep = Math.max(1, settings.frameStep ?? 1);
+    const framesToRender = isRangeInvalid ? 0 : Math.floor((settings.endFrame - settings.startFrame) / frameStep) + 1;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
@@ -104,7 +113,7 @@ export function RenderForm({ fileName, onStartRender, disabled, initialSettings 
                         <span className="text-[13px] mono uppercase tracking-[0.2em] font-bold">02 / Frame Range</span>
                     </div>
                     <div className="grid grid-cols-12 gap-4">
-                        <div className="col-span-12 sm:col-span-6">
+                        <div className="col-span-12 sm:col-span-4">
                             <label className="block text-[15px] font-bold uppercase tracking-widest mb-3 opacity-60">Start_Frame</label>
                             <input
                                 type="number"
@@ -118,7 +127,7 @@ export function RenderForm({ fileName, onStartRender, disabled, initialSettings 
                                 disabled={disabled}
                             />
                         </div>
-                        <div className="col-span-12 sm:col-span-6">
+                        <div className="col-span-12 sm:col-span-4">
                             <label className="block text-[15px] font-bold uppercase tracking-widest mb-3 opacity-60">End_Frame</label>
                             <input
                                 type="number"
@@ -132,6 +141,22 @@ export function RenderForm({ fileName, onStartRender, disabled, initialSettings 
                                 disabled={disabled}
                             />
                         </div>
+                        <div className="col-span-12 sm:col-span-4">
+                            <label className="block text-[15px] font-bold uppercase tracking-widest mb-3 opacity-60">Every Nth frame</label>
+                            <input
+                                type="number"
+                                min={1}
+                                value={settings.frameStep ?? 1}
+                                onChange={(e) => setSettings({ ...settings, frameStep: Math.max(1, parseInt(e.target.value) || 1) })}
+                                className="w-full px-4 py-3 bg-surface border border-border-subtle focus:border-accent outline-none text-base mono transition-colors"
+                                disabled={disabled}
+                            />
+                        </div>
+                        {!isRangeInvalid && (
+                            <div className="col-span-12 text-[12px] mono text-foreground-muted uppercase tracking-wider">
+                                {framesToRender} {framesToRender === 1 ? 'frame' : 'frames'} will be rendered
+                            </div>
+                        )}
                         {isRangeInvalid && (
                             <div className="col-span-12 text-[13px] mono text-red-500 uppercase tracking-widest mt-2">
                                 Start frame must not be after the end frame
@@ -195,18 +220,65 @@ export function RenderForm({ fileName, onStartRender, disabled, initialSettings 
                 <div className="space-y-6">
                     <div className="flex items-center gap-3 text-foreground-muted">
                         <Layers className="w-4 h-4" />
-                        <span className="text-[13px] mono uppercase tracking-[0.2em] font-bold">04 / Global Samples</span>
+                        <span className="text-[13px] mono uppercase tracking-[0.2em] font-bold">04 / Quality</span>
                     </div>
-                    <div>
-                        <input
-                            type="number"
-                            min={1}
-                            placeholder="Leave empty for project default"
-                            value={settings.samples || ''}
-                            onChange={(e) => setSettings({ ...settings, samples: e.target.value ? parseInt(e.target.value) : undefined })}
-                            className="w-full px-4 py-3 bg-surface border border-border-subtle focus:border-accent outline-none text-base mono transition-colors"
-                            disabled={disabled}
-                        />
+                    <div className="grid grid-cols-12 gap-4">
+                        <div className="col-span-12">
+                            <label className="block text-[15px] font-bold uppercase tracking-widest mb-3 opacity-60">Samples</label>
+                            <input
+                                type="number"
+                                min={1}
+                                placeholder="Leave empty for project default"
+                                value={settings.samples || ''}
+                                onChange={(e) => setSettings({ ...settings, samples: e.target.value ? parseInt(e.target.value) : undefined })}
+                                className="w-full px-4 py-3 bg-surface border border-border-subtle focus:border-accent outline-none text-base mono transition-colors"
+                                disabled={disabled}
+                            />
+                        </div>
+                        <div className="col-span-12 sm:col-span-4">
+                            <label className="block text-[15px] font-bold uppercase tracking-widest mb-3 opacity-60">Image size</label>
+                            <select
+                                value={settings.resolutionPercent ?? 0}
+                                onChange={(e) => setSettings({ ...settings, resolutionPercent: parseInt(e.target.value) || undefined })}
+                                className="w-full px-4 py-3 bg-surface border border-border-subtle focus:border-accent outline-none text-base font-bold transition-colors appearance-none"
+                                disabled={disabled}
+                            >
+                                <option value={0}>Scene default</option>
+                                <option value={25}>25% (quick preview)</option>
+                                <option value={50}>50%</option>
+                                <option value={75}>75%</option>
+                                <option value={100}>100% (full size)</option>
+                            </select>
+                        </div>
+                        <div className="col-span-12 sm:col-span-4">
+                            <label className="block text-[15px] font-bold uppercase tracking-widest mb-3 opacity-60">Denoise (Cycles)</label>
+                            <select
+                                value={settings.denoise ?? 'SCENE'}
+                                onChange={(e) => setSettings({ ...settings, denoise: e.target.value as SceneToggle })}
+                                className="w-full px-4 py-3 bg-surface border border-border-subtle focus:border-accent outline-none text-base font-bold transition-colors appearance-none"
+                                disabled={disabled}
+                            >
+                                <option value="SCENE">Scene default</option>
+                                <option value="ON">On</option>
+                                <option value="OFF">Off</option>
+                            </select>
+                        </div>
+                        <div className="col-span-12 sm:col-span-4">
+                            <label className="block text-[15px] font-bold uppercase tracking-widest mb-3 opacity-60">Transparent background</label>
+                            <select
+                                value={settings.format === 'JPEG' ? 'SCENE' : settings.transparent ?? 'SCENE'}
+                                onChange={(e) => setSettings({ ...settings, transparent: e.target.value as SceneToggle })}
+                                className="w-full px-4 py-3 bg-surface border border-border-subtle focus:border-accent outline-none text-base font-bold transition-colors appearance-none disabled:opacity-40"
+                                disabled={disabled || settings.format === 'JPEG'}
+                            >
+                                <option value="SCENE">Scene default</option>
+                                <option value="ON">On</option>
+                                <option value="OFF">Off</option>
+                            </select>
+                            {settings.format === 'JPEG' && (
+                                <p className="mt-2 text-[12px] mono text-foreground-muted uppercase tracking-wider">Needs PNG or OpenEXR</p>
+                            )}
+                        </div>
                     </div>
                 </div>
 

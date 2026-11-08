@@ -35,6 +35,17 @@ export function generateNotebookJson(
     const startFrame = toInt(settings.startFrame, 1);
     const endFrame = Math.max(startFrame, toInt(settings.endFrame, startFrame));
     const samples = toInt(settings.samples, 0);
+    const resolutionPercent = [25, 50, 75, 100].includes(Number(settings.resolutionPercent)) ? Number(settings.resolutionPercent) : 0; // 0 keeps the saved size
+    const frameStep = Math.min(Math.max(1, toInt(settings.frameStep, 1)), 10000);
+    const denoise = pick(settings.denoise, ['SCENE', 'ON', 'OFF'] as const, 'SCENE');
+    // JPEG has no alpha channel, so a transparent background is ignored for it
+    const transparent = format === 'JPEG' ? 'SCENE' : pick(settings.transparent, ['SCENE', 'ON', 'OFF'] as const, 'SCENE');
+    const extras = [
+        resolutionPercent > 0 ? `${resolutionPercent}% size` : '',
+        frameStep > 1 ? `frame step ${frameStep}` : '',
+        denoise !== 'SCENE' ? `denoise ${denoise === 'ON' ? 'on' : 'off'}` : '',
+        transparent !== 'SCENE' ? `transparent background ${transparent === 'ON' ? 'on' : 'off'}` : '',
+    ].filter(Boolean);
     // "Scene default" may turn out to be EEVEE, so only an explicit Cycles choice skips the virtual display
     const needsDisplay = engine !== 'CYCLES';
 
@@ -52,7 +63,7 @@ export function generateNotebookJson(
             source: [
                 "# RenderLift - Cloud Render Lift\n",
                 `**File**: ${fileName}\n`,
-                `**Settings**: Frames ${startFrame}-${endFrame} | ${format} | ${engine === 'SCENE' ? 'Scene engine' : engine} | ${device}\n`,
+                `**Settings**: Frames ${startFrame}-${endFrame} | ${format} | ${engine === 'SCENE' ? 'Scene engine' : engine} | ${device}${extras.length ? ` | ${extras.join(' | ')}` : ''}\n`,
                 "Run the cells below to start rendering!"
             ]
         },
@@ -165,6 +176,9 @@ export function generateNotebookJson(
                 "\n",
                 `ENGINE = ${py(engine)}  # 'SCENE' keeps the engine saved in the .blend\n`,
                 `SAMPLES = ${samples}  # 0 keeps the samples saved in the .blend\n`,
+                `RESOLUTION_PERCENT = ${resolutionPercent}  # 0 keeps the resolution saved in the .blend\n`,
+                `DENOISE = ${py(denoise)}  # 'SCENE' keeps the saved setting (Cycles only)\n`,
+                `TRANSPARENT = ${py(transparent)}  # 'SCENE' keeps the saved setting\n`,
                 "\n",
                 "scene = bpy.context.scene\n",
                 "if ENGINE == 'CYCLES':\n",
@@ -189,7 +203,19 @@ export function generateNotebookJson(
                 "    if hasattr(scene, 'eevee'):\n",
                 "        scene.eevee.taa_render_samples = SAMPLES\n",
                 "\n",
-                "print(f'RenderLift: engine={scene.render.engine}')"
+                "if RESOLUTION_PERCENT > 0:\n",
+                "    scene.render.resolution_percentage = RESOLUTION_PERCENT\n",
+                "if DENOISE != 'SCENE' and hasattr(scene, 'cycles'):\n",
+                "    scene.cycles.use_denoising = (DENOISE == 'ON')\n",
+                "if TRANSPARENT != 'SCENE':\n",
+                "    scene.render.film_transparent = (TRANSPARENT == 'ON')\n",
+                "    if TRANSPARENT == 'ON':\n",
+                "        # Without an alpha channel the image can't hold the transparency (PNG defaults to RGB)\n",
+                "        scene.render.image_settings.color_mode = 'RGBA'\n",
+                "\n",
+                "r = scene.render\n",
+                "denoise_now = scene.cycles.use_denoising if hasattr(scene, 'cycles') else 'n/a'\n",
+                "print(f'RenderLift: engine={r.engine} size={r.resolution_x}x{r.resolution_y} at {r.resolution_percentage}% denoise={denoise_now} transparent={r.film_transparent}')"
             ]
         },
         {
@@ -207,6 +233,7 @@ export function generateNotebookJson(
                 `\n`,
                 `start_frame = ${startFrame}\n`,
                 `end_frame = ${endFrame}\n`,
+                `frame_step = ${frameStep}  # render every Nth frame\n`,
                 `device = ${py(device)}\n`,
                 `out_format = ${py(format)}\n`,
                 `blender_dir = ${py(blenderDir)}\n`,
@@ -243,7 +270,7 @@ export function generateNotebookJson(
                 `    f'./{blender_dir}/blender', '-b', blend_path, '-noaudio',\n`,
                 `    '--python', '/content/renderlift_setup.py',\n`,
                 `    '-o', f'{output_dir}/render_', '-F', out_format,\n`,
-                `    '-s', str(start_frame), '-e', str(end_frame), '-a',\n`,
+                `    '-s', str(start_frame), '-e', str(end_frame), '-j', str(frame_step), '-a',\n`,
                 `    '--', '--cycles-device', device,\n`,
                 `]\n`,
                 `\n`,
@@ -305,6 +332,44 @@ export function generateNotebookJson(
             ]
         });
     }
+
+    // 7. Optional download of the frames as a zip. Off by default, so "Run all" never starts a download.
+    cells.push({
+        cell_type: "markdown",
+        metadata: {},
+        source: [
+            "## 7. (Optional) Download the frames as a zip\n",
+            "Your frames always stay in Google Drive under `Renders/`. To also get them as one zip in your browser, tick **DOWNLOAD_ZIP** and run this cell."
+        ]
+    });
+    cells.push({
+        cell_type: "code",
+        execution_count: null,
+        metadata: {},
+        outputs: [],
+        source: [
+            "# Download the rendered frames as a zip\n",
+            "DOWNLOAD_ZIP = False  #@param {type:\"boolean\"}\n",
+            "\n",
+            "if DOWNLOAD_ZIP:\n",
+            "    import os, zipfile\n",
+            "    from google.colab import files\n",
+            "    output_dir = os.path.join(LIFT_DIR, 'Renders')\n",
+            "    zip_path = '/content/renderlift_frames.zip'\n",
+            "    names = sorted(n for n in os.listdir(output_dir) if not n.startswith('.') and os.path.isfile(os.path.join(output_dir, n)))\n",
+            "    if not names:\n",
+            "        print('No rendered frames found in Renders/ yet.')\n",
+            "    else:\n",
+            "        # Frames are already compressed (PNG/JPEG/MP4), so just store them\n",
+            "        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_STORED) as z:\n",
+            "            for n in names:\n",
+            "                z.write(os.path.join(output_dir, n), n)\n",
+            "        print(f'Zipped {len(names)} file(s). Starting the download...')\n",
+            "        files.download(zip_path)\n",
+            "else:\n",
+            "    print('Tick DOWNLOAD_ZIP and run this cell to download the frames as a zip.')"
+        ]
+    });
 
     // Full Notebook JSON Structure
     return {
